@@ -47,11 +47,12 @@ class Trainer():
         train_loss_store = []
         for input_ids, attention_mask, token_type_ids, encoded_label in self.train_loader:
             pred = self.prediction(input_ids, attention_mask, token_type_ids)
+            encoded_label = encoded_label.type(torch.LongTensor).to(self.device)
             loss = self.step(pred, encoded_label)
             train_loss_store.append(loss)
             step_count += 1
             
-            if not step_count % 30:
+            if not step_count % 120:
                 print("Num Step : {}".format(step_count))
                 val_loss, f1_score, auprc = self.val()
                 print("@@@@@@@@@@ val_loss : {} @@@@@@@@@@".format(val_loss))

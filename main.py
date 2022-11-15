@@ -58,12 +58,13 @@ if __name__ == "__main__":
     preprocessing = Preprocessing(config, tokenizer)
     train_loader = preprocessing.get_train_loader()
     val_loader = preprocessing.get_val_loader()
-    
+    print(len(preprocessing.get_val_data()))
+    print(len(preprocessing.get_train_data()))
     ## Training
     trainer = Trainer(model, tokenizer, train_loader, val_loader, config)
     
     print("-----------------Start Training-----------------")
     for e in range(config.epoch):
-        print("############### Epoch {} Start ###############".format(e+1))
+        print("########################### Epoch {} Start ###########################".format(e+1))
         trainer.train()
     print("-----------------Finish Training-----------------")

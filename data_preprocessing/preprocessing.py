@@ -53,7 +53,26 @@ class Preprocessing():
         """        
         if self.config.val_data_flag == 0:
             self.train_data, self.val_data = train_test_split(self.train_data, test_size=0.06, random_state=random.randrange(1, 10000))
-        
+        elif self.config.val_data_flag == 1:
+            train_store = []
+            val_store = []
+            for i in range(30):
+                now_data = self.train_data.loc[self.train_data["encoded_label"] == i]
+                percent = 20 / len(now_data)
+                train, val = train_test_split(now_data, test_size=percent, random_state=random.randrange(1, 10000))
+                
+                train_store.append(train)
+                val_store.append(val)
+            
+            train_data = train_store[0]
+            val_data = val_store[0]
+            for i in range(1, 30):
+                train_data = pd.concat([train_data, train_store[i]], axis = 0)
+                val_data = pd.concat([val_data, val_store[i]], axis = 0)
+
+            self.train_data = train_data.sample(n=len(train_data), replace=False)
+            self.val_data = val_data.sample(n=len(val_data), replace=False)
+            
     def label_to_num(self):
         """
         data의 label을 숫자로 encoding하는 함수
