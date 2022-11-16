@@ -5,10 +5,13 @@ import torch
 import warnings
 import numpy as np
 import pandas as pd
+import wandb
 
 from model.model_selection import Selection
 from data_preprocessing.preprocessing import Preprocessing
 from train.trainer import Trainer
+from inference.test import Test
+
 
 def set_seeds(seed=random.randrange(1, 10000)):
     random.seed(seed)
@@ -33,17 +36,22 @@ if __name__ == "__main__":
     parser.add_argument("--undersampling_flag", type=bool)
     parser.add_argument("--mx_label_size", type=int)
     parser.add_argument("--val_data_flag", type=int)
+    parser.add_argument("--training_type", type=int)
     parser.add_argument("--bi_lstm", type=bool)
     parser.add_argument("--bi_gru", type=bool)
     parser.add_argument("--train_data_path", type=str)
     parser.add_argument("--test_data_path", type=str)
     parser.add_argument("--save_path", type=str)
+    parser.add_argument("--result_path", type=str)
     
     ## Set seed
     set_seeds()
     
     ## Reset the memory
     torch.cuda.empty_cache()
+    
+    ## Wandb
+    wandb.init(project="koohack", entity="happy06")
     
     ## Parameters
     config = parser.parse_args()
@@ -58,8 +66,7 @@ if __name__ == "__main__":
     preprocessing = Preprocessing(config, tokenizer)
     train_loader = preprocessing.get_train_loader()
     val_loader = preprocessing.get_val_loader()
-    print(len(preprocessing.get_val_data()))
-    print(len(preprocessing.get_train_data()))
+    
     ## Training
     trainer = Trainer(model, tokenizer, train_loader, val_loader, config)
     
@@ -68,3 +75,10 @@ if __name__ == "__main__":
         print("########################### Epoch {} Start ###########################".format(e+1))
         trainer.train()
     print("-----------------Finish Training-----------------")
+    
+    ## Testing
+    test = Test(config, preprocessing)
+    print("&&&&&&&&&&& Start Testing &&&&&&&&&&&")
+    test.test()
+    print("&&&&&&&&&&& Finish &&&&&&&&&&&")
+        

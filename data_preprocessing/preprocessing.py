@@ -20,7 +20,7 @@ class Preprocessing():
         Args:
             config (Namespace): Setting Parameters
             tokenizer (tokenizer): tokenzier
-        """        
+        """
         ## Setting
         self.config = config
         
@@ -34,9 +34,18 @@ class Preprocessing():
         self.train_loader = None
         self.val_loader = None
         
-        ## Get Label & Label encoding
+        ## Get Label & Label encoding to number
         self.label_to_num()
         
+        ## Seperate obj & subj
+        self.preprocessing_dataset(self.train_data)
+        self.preprocessing_dataset(self.test_data)
+        
+        ## simple concat
+        self.simple_concat(self.train_data)
+        self.simple_concat(self.test_data)
+        
+        ## Train & Validation Seperation
         self.seperate_train_val()
         
         ## Undersampling
@@ -46,11 +55,77 @@ class Preprocessing():
         ## Make data loader
         self.make_data_loader()
         
+    
+    def preprocessing_dataset(self, data: DataFrame):
+        """
+        initial dataset 내부의 entity를 사용하기 좋게 변형해줍니다.
+
+        Args:
+            data (DataFrame): 전처리를 하고 싶은 데이터
+        """
+        sub_word = []
+        sub_start = []
+        sub_end = []
+        sub_type = []
         
+        obj_word = []
+        obj_start = []
+        obj_end = []
+        obj_type = []
+        
+        for i,j in zip(data["subject_entity"], data["object_entity"]):
+            s = i[1:-1].split(":")
+            o = j[1:-1].split(":")
+            
+            s_word = s[1][2:-14]
+            s_start = s[2][1:-11]
+            s_end = s[3][1:-8]
+            s_type = s[4][2:-1]
+            
+            o_word = o[1][2:-14]
+            o_start = o[2][1:-11]
+            o_end = o[3][1:-8]
+            o_type = o[4][2:-1]
+            
+            sub_word.append(s_word)
+            sub_start.append(s_start)
+            sub_end.append(s_end)
+            sub_type.append(s_type)
+            
+            obj_word.append(o_word)
+            obj_start.append(o_start)
+            obj_end.append(o_end)
+            obj_type.append(o_type)
+
+        data["sub_word"] = sub_word
+        data["sub_start"] = sub_start
+        data["sub_end"] = sub_end
+        data["sub_type"] = sub_type
+        
+        data["obj_word"] = obj_word
+        data["obj_start"] = obj_start
+        data["obj_end"] = obj_end
+        data["obj_type"] = obj_type
+    
+    def simple_concat(self, data):
+        """
+        가장 간단하게 object + [SEP] + subject + [SEP] + sentence 를 조합한 방식
+        
+        Args:
+            data (DataFrame): 전처리를 하고 싶은 데이터
+        """
+        store = []
+        obj = list(data["obj_word"])
+        sub = list(data["sub_word"])
+        sentence = list(data["sentence"])
+        for i in range(len(data)):
+            store.append(obj[i]+"[SEP]"+sub[i]+"[SEP]"+sentence[i])
+        data["sentence"] = store
+    
     def seperate_train_val(self):
         """
         train data와 validation data를 분리하는 함수
-        """        
+        """
         if self.config.val_data_flag == 0:
             self.train_data, self.val_data = train_test_split(self.train_data, test_size=0.06, random_state=random.randrange(1, 10000))
         elif self.config.val_data_flag == 1:

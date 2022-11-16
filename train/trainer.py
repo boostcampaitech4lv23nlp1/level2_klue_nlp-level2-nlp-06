@@ -7,8 +7,10 @@ import warnings
 import torch.nn.functional as F
 import torch.nn as nn
 import sklearn
+import wandb
 from torch import Tensor
 from typing import List
+from argparse import Namespace
 from torch.utils.data import Dataset, DataLoader
 from transformers import AdamW
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
@@ -16,7 +18,20 @@ from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_sc
 warnings.filterwarnings("ignore")
 
 class Trainer():
-    def __init__(self, model, tokenizer, train_loader, val_loader, config):
+    """
+    Train stpe을 구현한 Class
+    """    
+    def __init__(self, model, tokenizer, train_loader: DataLoader, val_loader: DataLoader, config: Namespace):
+        """`
+        Trainer Class의 기본 setting 설정
+
+        Args:
+            model (nn.Module): train에 사용할 모델
+            tokenizer (tokenizer): tokenizer
+            train_loader (DataLoader): train data loader
+            val_loader (DataLoader): validation data loader
+            config (NameSpace): _description_
+        """        
         ## Device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -40,8 +55,11 @@ class Trainer():
         )
         
         ## Loss Function
-        self.cross_entropy_loss = nn.CrossEntropyLoss().to(self.device)
-    
+        self.cross_entropy_loss = nn.CrossEntropyLoss()
+
+        ## FP16
+        self.scaler = torch.cuda.amp.GradScaler()
+        
     def train(self):
         step_count = 0
         train_loss_store = []
@@ -58,6 +76,7 @@ class Trainer():
                 print("@@@@@@@@@@ val_loss : {} @@@@@@@@@@".format(val_loss))
                 print("@@@@@@@@@@ f1 score : {} @@@@@@@@@@".format(f1_score))
                 print("@@@@@@@@@@ auprc : {}    @@@@@@@@@@".format(auprc))
+                wandb.log({"val_loss": val_loss, "f1_score": f1_score, "auprc": auprc})
     
     def step(self, pred, encoded_label):
         encoded_label = encoded_label.type(torch.LongTensor).to(self.device)
@@ -95,7 +114,7 @@ class Trainer():
             
             prob = F.softmax(pred, dim=-1).detach().cpu().numpy()
             pred = pred.detach().cpu().numpy()
-            result = np.argmax(pred, axis=-1)
+            result = np.argmax(prob, axis=-1)
             
             store_loss.append(loss.detach().cpu())
             store_pred.append(result)
@@ -109,6 +128,7 @@ class Trainer():
         prob_lst = np.concatenate(store_prob)
         real_lst = np.concatenate(store_ground_truth).tolist()
         
+        self.save()
         return total_loss/batch_count, self.klue_re_micro_f1(pred_lst, real_lst), self.klue_re_auprc(prob_lst, real_lst)
     
     def klue_re_auprc(self, probs, labels):
