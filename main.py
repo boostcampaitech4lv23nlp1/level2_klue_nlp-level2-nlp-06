@@ -57,6 +57,9 @@ if __name__ == "__main__":
     config = parser.parse_args()
     config.device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
     
+    ## Wandb
+    wandb.init(project="KLUE_RE", entity="happy06", config=config)
+    
     ## Get transformer & tokenizer
     selection = Selection(config)
     model = selection.get_model()

@@ -2,23 +2,20 @@ import torch
 import torch.nn as nn
 
 class TransformerModel(nn.Module):
-    def __init__(self, transformer, first_in, config):
+    def __init__(self, transformer, config):
         super(TransformerModel, self).__init__()
         ## Setting
         self.config = config
         
-        ## Dimension
-        self.first_in = first_in
-        self.h_dim = 512
-        self.classification_dim = 30
-        
         ## Transformer model
         self.transformer = transformer
         
+        ## Dimension
+        self.h_dim = self.transformer.config.hidden_size
+        self.classification_dim = 30
+        
         ## Layers
         layers = []
-        layers.append(nn.Linear(self.first_in, self.h_dim))
-        layers.append(nn.ReLU())
         for i in range(self.config.num_hidden_layer): 
             layers.append(nn.Linear(self.h_dim, self.h_dim))
             layers.append(nn.ReLU())
@@ -31,8 +28,8 @@ class TransformerModel(nn.Module):
             input_ids,
             token_type_ids = token_type_ids,
             attention_mask = attention_masks,
-            return_dict = False,
-        )[0][:,0,:]
+            return_dict = True,
+        ).pooler_output
         
         ## Classification layer
         out = self.sequence(x)
