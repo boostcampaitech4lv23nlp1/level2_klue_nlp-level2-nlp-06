@@ -45,13 +45,13 @@ if __name__ == "__main__":
     parser.add_argument("--result_path", type=str)
     
     ## Set seed
-    set_seeds()
+    set_seeds(6)
     
     ## Reset the memory
     torch.cuda.empty_cache()
     
     ## Wandb
-    wandb.init(project="koohack", entity="happy06")
+    wandb.init(project="KLUE_RE", name="klue-bert-base", notes="sh code test")
     
     ## Parameters
     config = parser.parse_args()
@@ -71,9 +71,7 @@ if __name__ == "__main__":
     trainer = Trainer(model, tokenizer, train_loader, val_loader, config)
     
     print("-----------------Start Training-----------------")
-    for e in range(config.epoch):
-        print("########################### Epoch {} Start ###########################".format(e+1))
-        trainer.train()
+    trainer.train()
     print("-----------------Finish Training-----------------")
     
     ## Testing

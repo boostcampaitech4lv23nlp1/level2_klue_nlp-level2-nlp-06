@@ -12,7 +12,7 @@ from torch import Tensor
 from typing import List
 from argparse import Namespace
 from torch.utils.data import Dataset, DataLoader
-from transformers import AdamW
+from transformers import AdamW, get_linear_schedule_with_warmup
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 
 warnings.filterwarnings("ignore")
@@ -53,6 +53,7 @@ class Trainer():
             eps = 1e-8,
             weight_decay = 0.01,
         )
+        self.scheduler = get_linear_schedule_with_warmup(self.optimizer, num_warmup_steps = 500, num_training_steps = self.config.epoch * len(train_loader))
         
         ## Loss Function
         self.cross_entropy_loss = nn.CrossEntropyLoss()
@@ -62,29 +63,36 @@ class Trainer():
         
     def train(self):
         step_count = 0
-        train_loss_store = []
-        for input_ids, attention_mask, token_type_ids, encoded_label in self.train_loader:
-            pred = self.prediction(input_ids, attention_mask, token_type_ids)
-            encoded_label = encoded_label.type(torch.LongTensor).to(self.device)
-            loss = self.step(pred, encoded_label)
-            train_loss_store.append(loss)
-            step_count += 1
-            
-            if not step_count % 120:
-                print("Num Step : {}".format(step_count))
-                val_loss, f1_score, auprc = self.val()
-                print("@@@@@@@@@@ val_loss : {} @@@@@@@@@@".format(val_loss))
-                print("@@@@@@@@@@ f1 score : {} @@@@@@@@@@".format(f1_score))
-                print("@@@@@@@@@@ auprc : {}    @@@@@@@@@@".format(auprc))
-                wandb.log({"val_loss": val_loss, "f1_score": f1_score, "auprc": auprc})
-    
+        for e in range(self.config.epoch):
+            print("########################### Epoch {} Start ###########################".format(e+1))
+            print(len(self.train_loader))
+            print(len(self.val_loader))
+            train_loss_store = []                                                       #무엇을 위해 저장하는건가요?
+            for input_ids, attention_mask, token_type_ids, encoded_label in self.train_loader:
+                self.model.train()
+                pred = self.prediction(input_ids, attention_mask, token_type_ids)
+                encoded_label = encoded_label.type(torch.LongTensor).to(self.device)
+                loss = self.step(pred, encoded_label)
+                train_loss_store.append(loss)
+                step_count += 1
+                if not step_count % 100:
+                    wandb.log({"train/loss": loss.detach().cpu(), "train/learning_rate": self.scheduler.get_last_lr()[0]})
+                if not step_count % 500:
+                    print("Num Step : {}".format(step_count))
+                    val_loss, f1_score, auprc = self.val()
+                    print("@@@@@@@@@@ val_loss : {} @@@@@@@@@@".format(val_loss))
+                    print("@@@@@@@@@@ f1 score : {} @@@@@@@@@@".format(f1_score))
+                    print("@@@@@@@@@@ auprc : {}    @@@@@@@@@@".format(auprc))
+                    wandb.log({"val_loss": val_loss, "f1_score": f1_score, "auprc": auprc})
+        
     def step(self, pred, encoded_label):
-        encoded_label = encoded_label.type(torch.LongTensor).to(self.device)
+        encoded_label = encoded_label.type(torch.LongTensor).to(self.device)            ## 중복 인듯?
         loss = self.cross_entropy_loss(pred, encoded_label)
         
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+        self.scheduler.step()
         
         return loss
     
@@ -94,7 +102,8 @@ class Trainer():
             attention_mask.to(self.device),
             token_type_ids.to(self.device),
             )
-        pred = pred.squeeze()
+        
+        pred = pred.squeeze()                                               #squeeze하는 이유? output이 어떻게 나오죠?
         
         return pred
     
@@ -106,23 +115,26 @@ class Trainer():
         store_pred = []
         store_prob = []
         store_ground_truth = []
-        
+
+        self.model.eval()
+
         for input_ids, attention_mask, token_type_ids, encoded_label in self.val_loader:
-            pred = self.prediction(input_ids, attention_mask, token_type_ids)
-            encoded_label = encoded_label.type(torch.LongTensor).to(self.device)
-            loss = self.cross_entropy_loss(pred, encoded_label)
-            
-            prob = F.softmax(pred, dim=-1).detach().cpu().numpy()
-            pred = pred.detach().cpu().numpy()
-            result = np.argmax(prob, axis=-1)
-            
-            store_loss.append(loss.detach().cpu())
-            store_pred.append(result)
-            store_prob.append(prob)
-            store_ground_truth.append(encoded_label.detach().cpu().numpy())
-            
-            batch_count += 1
-            total_loss += loss.detach().cpu()
+            with torch.no_grad():
+                pred = self.prediction(input_ids, attention_mask, token_type_ids)
+                encoded_label = encoded_label.type(torch.LongTensor).to(self.device)
+                loss = self.cross_entropy_loss(pred, encoded_label)
+                
+                prob = F.softmax(pred, dim=-1).detach().cpu().numpy()
+                pred = pred.detach().cpu().numpy()
+                result = np.argmax(prob, axis=-1)
+                
+                store_loss.append(loss.detach().cpu())
+                store_pred.append(result)
+                store_prob.append(prob)
+                store_ground_truth.append(encoded_label.detach().cpu().numpy())
+                
+                batch_count += 1
+                total_loss += loss.detach().cpu()
         
         pred_lst = np.concatenate(store_pred).tolist()
         prob_lst = np.concatenate(store_prob)
