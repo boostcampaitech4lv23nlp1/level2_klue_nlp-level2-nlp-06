@@ -45,17 +45,17 @@ if __name__ == "__main__":
     parser.add_argument("--result_path", type=str)
     
     ## Set seed
-    set_seeds()
+    set_seeds(6)
     
     ## Reset the memory
     torch.cuda.empty_cache()
     
-    ## Wandb
-    wandb.init(project="koohack", entity="happy06")
-    
     ## Parameters
     config = parser.parse_args()
     config.device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
+    
+    ## Wandb
+    wandb.init(project="KLUE_RE", entity="happy06", config=config)
     
     ## Get transformer & tokenizer
     selection = Selection(config)
