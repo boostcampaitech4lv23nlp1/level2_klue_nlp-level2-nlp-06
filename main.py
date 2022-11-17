@@ -51,7 +51,7 @@ if __name__ == "__main__":
     torch.cuda.empty_cache()
     
     ## Wandb
-    wandb.init(project="KLUE_RE", name="klue-bert-base", notes="sh code test")
+    wandb.init(project="KLUE_RE", name="klue-bert-base", notes="sh code test", entity="happy06")
     
     ## Parameters
     config = parser.parse_args()

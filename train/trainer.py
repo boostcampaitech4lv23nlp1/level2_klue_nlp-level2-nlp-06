@@ -84,8 +84,7 @@ class Trainer():
                     print("@@@@@@@@@@ auprc : {}    @@@@@@@@@@".format(auprc))
                     wandb.log({"val_loss": val_loss, "f1_score": f1_score, "auprc": auprc})
         
-    def step(self, pred, encoded_label):
-        encoded_label = encoded_label.type(torch.LongTensor).to(self.device)           
+    def step(self, pred, encoded_label):      
         loss = self.cross_entropy_loss(pred, encoded_label)
         
         self.optimizer.zero_grad()
@@ -100,10 +99,7 @@ class Trainer():
             input_ids.to(self.device),
             attention_mask.to(self.device),
             token_type_ids.to(self.device),
-            )
-        
-        pred = pred.squeeze()                                              
-        
+            )                                       
         return pred
     
     def val(self):
