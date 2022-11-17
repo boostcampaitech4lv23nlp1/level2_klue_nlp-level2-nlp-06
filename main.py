@@ -43,6 +43,9 @@ if __name__ == "__main__":
     parser.add_argument("--test_data_path", type=str)
     parser.add_argument("--save_path", type=str)
     parser.add_argument("--result_path", type=str)
+    parser.add_argument("--wandb_project", type=str)
+    parser.add_argument("--wandb_entity", type=str)
+    parser.add_argument("--wandb_name", type=str)
     
     ## Set seed
     set_seeds(6)
@@ -50,12 +53,12 @@ if __name__ == "__main__":
     ## Reset the memory
     torch.cuda.empty_cache()
     
-    ## Wandb
-    wandb.init(project="KLUE_RE", name="klue-bert-base", notes="sh code test", entity="happy06")
-    
     ## Parameters
     config = parser.parse_args()
     config.device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
+    
+    ## Wandb
+    wandb.init(project=config.wandb_project, name=config.wandb_name, notes="sh code test", entity=config.wandb_entity)
     
     ## Wandb
     wandb.init(project="KLUE_RE", entity="happy06", config=config)
