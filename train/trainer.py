@@ -66,9 +66,7 @@ class Trainer():
         step_count = 0
         for e in range(self.config.epoch):
             print("########################### Epoch {} Start ###########################".format(e+1))
-            print(len(self.train_loader))
-            print(len(self.val_loader))
-            train_loss_store = []                                                       #무엇을 위해 저장하는건가요?
+            train_loss_store = []                                                      
             for input_ids, attention_mask, token_type_ids, encoded_label in self.train_loader:
                 self.model.train()
                 pred = self.prediction(input_ids, attention_mask, token_type_ids)
@@ -87,7 +85,7 @@ class Trainer():
                     wandb.log({"val_loss": val_loss, "f1_score": f1_score, "auprc": auprc})
         
     def step(self, pred, encoded_label):
-        encoded_label = encoded_label.type(torch.LongTensor).to(self.device)            ## 중복 인듯?
+        encoded_label = encoded_label.type(torch.LongTensor).to(self.device)           
         loss = self.cross_entropy_loss(pred, encoded_label)
         
         self.optimizer.zero_grad()
@@ -104,7 +102,7 @@ class Trainer():
             token_type_ids.to(self.device),
             )
         
-        pred = pred.squeeze()                                               #squeeze하는 이유? output이 어떻게 나오죠?
+        pred = pred.squeeze()                                              
         
         return pred
     
