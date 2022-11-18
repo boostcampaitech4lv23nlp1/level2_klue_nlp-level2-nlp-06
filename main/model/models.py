@@ -22,15 +22,17 @@ class TransformerModel(nn.Module):
         layers.append(nn.Linear(self.h_dim, self.classification_dim))
         self.sequence = nn.Sequential(*layers)
         
-    def forward(self, input_ids, attention_masks, token_type_ids):
+    def forward(self, *input, **kwargs):
         ## Tranformer output
+        
         x = self.transformer(
-            input_ids,
-            token_type_ids = token_type_ids,
-            attention_mask = attention_masks,
+            kwargs["input_ids"],
+            token_type_ids = kwargs["token_type_ids"],
+            attention_mask = kwargs["attention_mask"],
             return_dict = True,
         ).pooler_output
         
         ## Classification layer
         out = self.sequence(x)
+        
         return out
