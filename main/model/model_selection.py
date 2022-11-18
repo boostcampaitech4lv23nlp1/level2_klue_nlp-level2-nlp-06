@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 from argparse import Namespace
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, AutoModel, AutoConfig
 from model.models import TransformerModel
 
 class Selection():
@@ -24,18 +24,20 @@ class Selection():
         self.model = None
         
         ## Classification with [ClS] or [MASK]
-        if self.config.is_transformer:
+        if self.config.model_type == 0:
+            ## Model config setting
+            model_config = AutoConfig.from_pretrained(self.config.model_name)
+            model_config.num_labels = 30
+            
             ## Load transformer & tokenizer
-            transformer = AutoModel.from_pretrained(self.config.model_name)
+            transformer = AutoModel.from_pretrained(self.config.model_name, config=model_config)
             self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
             
             ## Get final model
             self.model = TransformerModel(transformer, config)
+            self.model.config = model_config
             
-        ## Classification with Bi-LSTM or Bi-GRU
-        else: 
-            ## Write the code here
-            pass
+        ## TODO: 다른 모델을 사용할 경우
     
     def add_unk_token(self):
         pass

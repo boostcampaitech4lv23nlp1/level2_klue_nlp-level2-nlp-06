@@ -46,8 +46,7 @@ class Trainer():
         self.train_loader = train_loader
         self.val_loader = val_loader
         
-        ## Optimizer
-        ## TODO : config 통해서 조절 가능하게.
+        ## Optimizer (optimizer 셋팅에 따라서 바꿔주는 것도 필요할지도??)
         self.optimizer = AdamW(
             self.model.parameters(),
             lr = self.config.lr,

@@ -6,10 +6,10 @@ import warnings
 import numpy as np
 import pandas as pd
 import wandb
-
+from torch.utils.data import Dataset, DataLoader
 from model.model_selection import Selection
 from data_preprocessing.preprocessing import Preprocessing
-from train.trainer import Trainer
+from train.trainer import MyTrainer
 from inference.test import Test
 
 
@@ -32,17 +32,16 @@ if __name__ == "__main__":
     parser.add_argument("--num_hidden_layer", type=int)
     parser.add_argument("--mx_token_size", type=int)
     parser.add_argument("--lr", type=float)
-    parser.add_argument("--is_transformer", type=bool)
-    parser.add_argument("--undersampling_flag", type=bool)
-    parser.add_argument("--mx_label_size", type=int)
-    parser.add_argument("--val_data_flag", type=int)
-    parser.add_argument("--training_type", type=int)
-    parser.add_argument("--bi_lstm", type=bool)
-    parser.add_argument("--bi_gru", type=bool)
+    parser.add_argument("--input_type", type=int)
+    parser.add_argument("--model_type", type=int)
     parser.add_argument("--train_data_path", type=str)
+    parser.add_argument("--val_data_path", type=str)
     parser.add_argument("--test_data_path", type=str)
     parser.add_argument("--save_path", type=str)
     parser.add_argument("--result_path", type=str)
+    parser.add_argument("--wandb_project", type=str)
+    parser.add_argument("--wandb_entity", type=str)
+    parser.add_argument("--wandb_name", type=str)
     
     ## Set seed
     set_seeds(6)
@@ -55,7 +54,7 @@ if __name__ == "__main__":
     config.device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
     
     ## Wandb
-    wandb.init(project="KLUE_RE", entity="happy06", config=config)
+    #wandb.init(project=config.wandb_project, name=config.wandb_name, notes="sh code test", entity=config.wandb_entity)
     
     ## Get transformer & tokenizer
     selection = Selection(config)
@@ -64,20 +63,19 @@ if __name__ == "__main__":
     
     ## Data preprocessing
     preprocessing = Preprocessing(config, tokenizer)
-    train_loader = preprocessing.get_train_loader()
-    val_loader = preprocessing.get_val_loader()
+    train_dataset = preprocessing.get_train_dataset()
+    val_dataset = preprocessing.get_val_dataset()
+    test_dataset = preprocessing.get_test_dataset()
     
     ## Training
-    trainer = Trainer(model, tokenizer, train_loader, val_loader, config)
+    trainer = MyTrainer(model, tokenizer, train_dataset, val_dataset, config)
     
     print("-----------------Start Training-----------------")
-    for e in range(config.epoch):
-        print("########################### Epoch {} Start ###########################".format(e+1))
-        trainer.train()
+    trainer.train()
     print("-----------------Finish Training-----------------")
     
     ## Testing
-    test = Test(config, preprocessing)
+    test = Test(config, test_dataset)
     print("&&&&&&&&&&& Start Testing &&&&&&&&&&&")
     test.test()
     print("&&&&&&&&&&& Finish &&&&&&&&&&&")
