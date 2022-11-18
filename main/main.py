@@ -42,6 +42,7 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_project", type=str)
     parser.add_argument("--wandb_entity", type=str)
     parser.add_argument("--wandb_name", type=str)
+    parser.add_argument("--wandb_group", type=str)
     
     ## Set seed
     set_seeds(6)
@@ -54,7 +55,7 @@ if __name__ == "__main__":
     config.device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
     
     ## Wandb
-    #wandb.init(project=config.wandb_project, name=config.wandb_name, notes="sh code test", entity=config.wandb_entity)
+    wandb.init(project=config.wandb_project, name=config.wandb_name, notes="binary classification", entity=config.wandb_entity, group=config.group)
     
     ## Get transformer & tokenizer
     selection = Selection(config)

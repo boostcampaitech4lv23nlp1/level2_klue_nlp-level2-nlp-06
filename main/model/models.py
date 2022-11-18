@@ -12,14 +12,13 @@ class TransformerModel(nn.Module):
         
         ## Dimension
         self.h_dim = self.transformer.config.hidden_size
-        self.classification_dim = 30
         
         ## Layers
         layers = []
         for i in range(self.config.num_hidden_layer): 
             layers.append(nn.Linear(self.h_dim, self.h_dim))
             layers.append(nn.ReLU())
-        layers.append(nn.Linear(self.h_dim, self.classification_dim))
+        layers.append(nn.Linear(self.h_dim, self.transformer.config.num_labels))
         self.sequence = nn.Sequential(*layers)
         
     def forward(self, *input, **kwargs):

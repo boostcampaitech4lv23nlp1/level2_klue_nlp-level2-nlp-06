@@ -37,8 +37,14 @@ class Preprocessing():
         self.test_dataset = None
         
         ## Get Label & Label encoding to number
-        self.label_to_num(self.train_data)
-        self.label_to_num(self.val_data)
+        ## input_type1 is for binary label.(related? not related?)
+        if self.config.input_type == 1:
+            self.label_to_num(self.train_data, binary_mode=True)
+            self.label_to_num(self.val_data, binary_mode=True)
+        else:
+            self.label_to_num(self.train_data)
+            self.label_to_num(self.val_data)
+        
         
         ## Seperate obj & subj
         self.preprocessing_dataset(self.train_data)
@@ -152,16 +158,24 @@ class Preprocessing():
             self.train_data = train_data.sample(n=len(train_data), replace=False)
             self.val_data = val_data.sample(n=len(val_data), replace=False)
             
-    def label_to_num(self, data):
+    def label_to_num(self, data, binary_mode=False):
         """
         data의 label을 숫자로 encoding하는 함수
-        """        
-        with open("./source/dict_label_to_num.pkl", "rb") as f:
-            dict_label_to_num = pickle.load(f)
-        
-        encoded_label = []
-        for i in range(len(data)):
-            encoded_label.append(dict_label_to_num[data["label"].iloc[i]])
+        """
+        if binary_mode:
+            encoded_label = []
+            for i in range(len(data)):
+                if data['label'].iloc[i] == "no_relation":
+                    encoded_label.append(0)
+                else:
+                    encoded_label.append(1)
+        else:
+            with open("./source/dict_label_to_num.pkl", "rb") as f:
+                dict_label_to_num = pickle.load(f)
+            
+            encoded_label = []
+            for i in range(len(data)):
+                encoded_label.append(dict_label_to_num[data["label"].iloc[i]])
         
         data["encoded_label"] = encoded_label
     

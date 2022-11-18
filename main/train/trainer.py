@@ -83,20 +83,20 @@ class MyTrainer():
         ## TODO: 여기에서 여러 가지의 하이퍼파라미터 설정해볼 수 있음 
         self.training_args = TrainingArguments(
             output_dir="./results",
-            save_total_limit=2,
-            save_steps=1000,
-            num_train_epochs=self.config.epoch,
-            learning_rate=self.config.lr,
-            per_device_train_batch_size=self.config.batch_size,
-            per_device_eval_batch_size=self.config.batch_size,
+            save_total_limit=5,
+            save_steps=500,
+            num_train_epochs=config.epoch,
+            learning_rate=config.lr,
+            per_device_train_batch_size=config.batch_size,
+            per_device_eval_batch_size=config.batch_size,
             warmup_steps=500,
             weight_decay=0.01,
             logging_dir='./logs',            
             logging_steps=100,
             evaluation_strategy='steps',
-            eval_steps=1000,
+            eval_steps=500,
             load_best_model_at_end=True,
-            fp16=True,
+            fp16=False,
         )
         
     def train(self):
@@ -116,7 +116,7 @@ class MyTrainer():
 
     def save(self): self.model.save_pretrained(self.config.save_path)
         
-    def klue_re_micro_f1(preds, labels):
+    def klue_re_micro_f1(self, preds, labels):
         """KLUE-RE micro f1 (except no_relation)"""
         label_list = ['no_relation', 'org:top_members/employees', 'org:members',
         'org:product', 'per:title', 'org:alternate_names',
@@ -134,7 +134,7 @@ class MyTrainer():
         label_indices.remove(no_relation_label_idx)
         return sklearn.metrics.f1_score(labels, preds, average="micro", labels=label_indices) * 100.0
 
-    def klue_re_auprc(probs, labels):
+    def klue_re_auprc(self, probs, labels):
         """KLUE-RE AUPRC (with no_relation)"""
         labels = np.eye(30)[labels]
 
@@ -146,15 +146,19 @@ class MyTrainer():
             score[c] = sklearn.metrics.auc(recall, precision)
         return np.average(score) * 100.0
     
-    def compute_metrics(pred):
+    def compute_metrics(self, pred):
         """ validation을 위한 metrics function """
         labels = pred.label_ids
         preds = pred.predictions.argmax(-1)
         probs = pred.predictions
-
+        # binary classification 에서는 accuracy만 계산.
+        if self.config.input_type == 1:
+            acc = accuracy_score(labels, preds)
+            return {"accuracy": acc}
+            
         # calculate accuracy using sklearn's function
-        f1 = klue_re_micro_f1(preds, labels)
-        auprc = klue_re_auprc(probs, labels)
+        f1 = self.klue_re_micro_f1(preds, labels)
+        auprc = self.klue_re_auprc(probs, labels)
         acc = accuracy_score(labels, preds)
         
         return {
