@@ -55,7 +55,7 @@ if __name__ == "__main__":
     config.device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
     
     ## Wandb
-    wandb.init(project=config.wandb_project, name=config.wandb_name, notes="binary classification", entity=config.wandb_entity, group=config.group)
+    #wandb.init(project=config.wandb_project, name=config.wandb_name, notes="binary classification", entity=config.wandb_entity, group=config.wandb_group)
     
     ## Get transformer & tokenizer
     selection = Selection(config)

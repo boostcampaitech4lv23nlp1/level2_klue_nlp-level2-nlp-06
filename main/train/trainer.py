@@ -94,7 +94,7 @@ class MyTrainer():
             logging_dir='./logs',            
             logging_steps=100,
             evaluation_strategy='steps',
-            eval_steps=500,
+            eval_steps=10,
             load_best_model_at_end=True,
             fp16=False,
         )
@@ -153,6 +153,7 @@ class MyTrainer():
         probs = pred.predictions
         # binary classification 에서는 accuracy만 계산.
         if self.config.input_type == 1:
+            print("labels :", labels.shape, "preds :", preds.shape)
             acc = accuracy_score(labels, preds)
             return {"accuracy": acc}
             

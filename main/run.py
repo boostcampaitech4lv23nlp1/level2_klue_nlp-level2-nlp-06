@@ -9,14 +9,21 @@ class Config:
         self.wandb_name: str = "is_related?" # wandb 내에서 작업 이름 설정 (중요)
         
         ## 2. 데이터 위치
-        self.train_data_path: str = "../../dataset/train/train5/binary_train_data.csv"
-        self.val_data_path: str = "../../dataset/valid/valid5/binary_valid_data.csv"
+        # self.train_data_path: str = "../../dataset/train/train5/binary_train_data.csv"
+        # self.val_data_path: str = "../../dataset/valid/valid5/binary_valid_data.csv"
+        # self.test_data_path: str = "../../dataset/test/test_data.csv"
+        self.train_data_path: str = "../../dataset/train/train2/train_80.csv"
+        self.val_data_path: str = "../../dataset/valid/valid2/valid_20.csv"
         self.test_data_path: str = "../../dataset/test/test_data.csv"
 
         ## 3. 학습 설정
         self.epoch: int = 5
-        self.model_type: int = 1
-        self.input_type: int = 1
+        '''
+        0 : base
+        1 : binary classification
+        '''
+        self.model_type: int = 0
+        self.input_type: int = 0
 
         ## 4. 모델 하이퍼파라미터
         self.num_hidden_layer: int = 5
@@ -27,7 +34,7 @@ class Config:
         ## 5. 한번 바꾸면 바꿀일 없는 설정
         self.wandb_project: str = "KLUE_RE"
         self.wandb_entity: str = "happy06"
-        self.wandb_group: str = "is related?"
+        self.wandb_group: str = "is_related?"
 
 def cmd_parser(dic):
     cmd = "python3 main.py "
