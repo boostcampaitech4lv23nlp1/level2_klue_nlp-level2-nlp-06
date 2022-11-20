@@ -45,7 +45,6 @@ class Preprocessing():
             self.label_to_num(self.train_data)
             self.label_to_num(self.val_data)
         
-        
         ## Seperate obj & subj
         self.preprocessing_dataset(self.train_data)
         self.preprocessing_dataset(self.test_data)
@@ -57,6 +56,10 @@ class Preprocessing():
             self.simple_concat(self.train_data)
             self.simple_concat(self.test_data)
             self.simple_concat(self.val_data)
+        elif self.config.input_type == 1:
+            self.typed_entity_marker_punct_kr(self.train_data)
+            self.typed_entity_marker_punct_kr(self.val_data)
+            self.typed_entity_marker_punct_kr(self.test_data)
         
         ## Train & Validation Seperation
         ## TODO: Validation dataset Seperation or other method
@@ -84,18 +87,18 @@ class Preprocessing():
         obj_type = []
         
         for i,j in zip(data["subject_entity"], data["object_entity"]):
-            s = i[1:-1].split(":")
-            o = j[1:-1].split(":")
+            s = eval(i)
+            o = eval(j)
             
-            s_word = s[1][2:-14]
-            s_start = s[2][1:-11]
-            s_end = s[3][1:-8]
-            s_type = s[4][2:-1]
+            s_word = s["word"]
+            s_start = s["start_idx"]
+            s_end = s["end_idx"]
+            s_type = s["type"]
             
-            o_word = o[1][2:-14]
-            o_start = o[2][1:-11]
-            o_end = o[3][1:-8]
-            o_type = o[4][2:-1]
+            o_word = o["word"]
+            o_start = o["start_idx"]
+            o_end = o["end_idx"]
+            o_type = o["type"]
             
             sub_word.append(s_word)
             sub_start.append(s_start)
@@ -129,7 +132,39 @@ class Preprocessing():
         sub = list(data["sub_word"])
         sentence = list(data["sentence"])
         for i in range(len(data)):
-            store.append(obj[i]+"[SEP]"+sub[i]+"[SEP]"+sentence[i])
+            store.append(obj[i]+"[SEP]"+sub[i]+" [SEP] "+sentence[i])
+        data["sentence"] = store
+    
+    def typed_entity_marker_punct_kr(self, data):
+        
+        dic = {"PER": "사람", "ORG": "조직", "LOC": "장소", "DAT": "일시", "POH": "명사", "NOH": "숫자"}
+    
+        store = []
+        for i in range(len(data)):
+            s = data["sentence"][i]
+            sj = data["sub_word"][i]
+            s_s = int(data["sub_start"][i])
+            s_e = int(data["sub_end"][i])
+            s_t = data["sub_type"][i]
+            oj = data["obj_word"][i]
+            o_s = int(data["obj_start"][i])
+            o_e = int(data["obj_end"][i])
+            o_t = data["obj_type"][i]
+            
+            subject_entity = "@ " + "+ " + dic[s_t] + " + " + sj + " @ "
+            object_entity = "# " + "^ " + dic[o_t] + " ^ " + oj + " # "
+            
+            if s_e > o_e:
+                s1 = s[:o_s]
+                s2 = s[o_e+1:s_s]
+                s3 = s[s_e+1:]
+                new_s = s1 + object_entity + s2 + subject_entity + s3
+            else:
+                s1 = s[:s_s]
+                s2 = s[s_e+1:o_s]
+                s3 = s[o_e+1:]
+                new_s = s1 + subject_entity + s2 + object_entity + s3
+            store.append(new_s)
         data["sentence"] = store
     
     def seperate_train_val(self):

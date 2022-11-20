@@ -2,6 +2,7 @@ import os
 import argparse
 import random
 import torch
+import inspect
 import warnings
 import numpy as np
 import pandas as pd
@@ -55,7 +56,7 @@ if __name__ == "__main__":
     config.device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
     
     ## Wandb
-    #wandb.init(project=config.wandb_project, name=config.wandb_name, notes="binary classification", entity=config.wandb_entity, group=config.wandb_group)
+    wandb.init(project=config.wandb_project, name=config.wandb_name, notes="binary classification", entity=config.wandb_entity, group=config.wandb_group)
     
     ## Get transformer & tokenizer
     selection = Selection(config)
@@ -67,16 +68,18 @@ if __name__ == "__main__":
     train_dataset = preprocessing.get_train_dataset()
     val_dataset = preprocessing.get_val_dataset()
     test_dataset = preprocessing.get_test_dataset()
+    val_data = preprocessing.get_val_data()
+    test_data = preprocessing.get_test_data()
     
     ## Training
-    trainer = MyTrainer(model, tokenizer, train_dataset, val_dataset, config)
+    trainer = MyTrainer(model, tokenizer, train_dataset, val_dataset, val_data, config)
     
     print("-----------------Start Training-----------------")
     trainer.train()
     print("-----------------Finish Training-----------------")
     
     ## Testing
-    test = Test(config, test_dataset)
+    test = Test(config, test_dataset, test_data)
     print("&&&&&&&&&&& Start Testing &&&&&&&&&&&")
     test.test()
     print("&&&&&&&&&&& Finish &&&&&&&&&&&")
