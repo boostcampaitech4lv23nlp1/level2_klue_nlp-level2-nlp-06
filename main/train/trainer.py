@@ -94,7 +94,7 @@ class MyTrainer():
             logging_dir='./logs',            
             logging_steps=100,
             evaluation_strategy='steps',
-            eval_steps=10,
+            eval_steps=500,
             load_best_model_at_end=True,
             fp16=False,
         )
