@@ -37,6 +37,16 @@ class Selection():
             self.model = TransformerModel(transformer, config)
             self.model.config = model_config
             
+        ## Model classify sentence to "no_relation" or "related"
+        elif self.config.model_type == 1:
+            model_config = AutoConfig.from_pretrained(self.config.model_name)
+            model_config.num_labels = 2
+            
+            transformer = AutoModel.from_pretrained(self.config.model_name, config=model_config)
+            self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
+            
+            self.model = TransformerModel(transformer, config)
+            self.model.config = model_config
         ## TODO: 다른 모델을 사용할 경우
     
     def add_unk_token(self):
