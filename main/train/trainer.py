@@ -93,7 +93,7 @@ class MyTrainer():
         ## TODO: 여기에서 여러 가지의 하이퍼파라미터 설정해볼 수 있음 
         self.training_args = TrainingArguments(
             output_dir="./results",
-            save_total_limit=5,
+            save_total_limit=2,
             save_steps=500,
             num_train_epochs=config.epoch,
             learning_rate=config.lr,
@@ -104,9 +104,9 @@ class MyTrainer():
             logging_dir='./logs',            
             logging_steps=100,
             evaluation_strategy='steps',
-            eval_steps=10,
+            eval_steps=500,
             load_best_model_at_end=True,
-            fp16=False,
+            fp16=True,
         )
         
     def train(self):

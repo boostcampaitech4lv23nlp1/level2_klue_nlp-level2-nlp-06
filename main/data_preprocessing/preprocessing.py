@@ -56,7 +56,7 @@ class Preprocessing():
             self.simple_concat(self.train_data)
             self.simple_concat(self.test_data)
             self.simple_concat(self.val_data)
-        elif self.config.input_type == 1:
+        elif self.config.input_type == 2:
             self.typed_entity_marker_punct_kr(self.train_data)
             self.typed_entity_marker_punct_kr(self.val_data)
             self.typed_entity_marker_punct_kr(self.test_data)
@@ -132,7 +132,7 @@ class Preprocessing():
         sub = list(data["sub_word"])
         sentence = list(data["sentence"])
         for i in range(len(data)):
-            store.append(obj[i]+"[SEP]"+sub[i]+" [SEP] "+sentence[i])
+            store.append(obj[i]+" [SEP] "+sub[i]+" [SEP] "+sentence[i])
         data["sentence"] = store
     
     def typed_entity_marker_punct_kr(self, data):
