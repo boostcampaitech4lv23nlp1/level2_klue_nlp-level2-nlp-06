@@ -30,6 +30,7 @@ class Test():
         self.tokenizer = selection.get_tokenizer()
         self.model.load_state_dict(torch.load(self.config.save_path))
         self.model.to(self.device)
+        self.model.eval()
         
         ## Store
         self.test_label_store = []
