@@ -3,6 +3,7 @@ import pickle as pickle
 import torch.nn.functional as F
 import pandas as pd
 import numpy as np
+from pandas import DataFrame
 from argparse import Namespace
 from model.model_selection import Selection
 from data_preprocessing.preprocessing import Preprocessing
@@ -12,7 +13,7 @@ class Test():
     """
     Test 모듈
     """    
-    def __init__(self, config: Namespace, test_dataset: Dataset):
+    def __init__(self, config: Namespace, test_dataset: Dataset, test_data: DataFrame):
         ## Device
         self.device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
         
@@ -21,6 +22,7 @@ class Test():
         
         ## Test data
         self.test_dataset = test_dataset
+        self.test_data = test_data
         
         ## Get model and tokenizer
         selection = Selection(config)
@@ -28,6 +30,7 @@ class Test():
         self.tokenizer = selection.get_tokenizer()
         self.model.load_state_dict(torch.load(self.config.save_path))
         self.model.to(self.device)
+        self.model.eval()
         
         ## Store
         self.test_label_store = []
@@ -40,14 +43,11 @@ class Test():
         for i in range(len(self.test_dataset)):
             out = self.test_dataset[i]
             out = out.to(self.device)
-            #idz = torch.tensor(idz).to(self.device)
-            #attentions = torch.tensor(attentions).to(self.device)
-            #token_types = torch.tensor(token_types).to(self.device)
 
             with torch.no_grad():
                 pred = self.model(**out)
             
-            prob = F.softmax(pred, dim=-1).detach().cpu().numpy()
+            prob = F.softmax(pred["logits"], dim=-1).detach().cpu().numpy()
             result = np.argmax(prob, axis=-1)
             
             self.test_label_store.append(result)
@@ -60,7 +60,7 @@ class Test():
         """
         숫자로 encoding되어 있는 label을 실제 label로 decoding해주는 함수
         """        
-        with open("../source/dict_num_to_label.pkl", "rb") as f:
+        with open("./source/dict_num_to_label.pkl", "rb") as f:
             dict_num_to_label = pickle.load(f)
         
         decoded_label = []
