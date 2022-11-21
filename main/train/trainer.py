@@ -8,6 +8,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 import sklearn
 import wandb
+from pandas import DataFrame
 from torch import Tensor
 from typing import List
 from argparse import Namespace
@@ -43,6 +44,13 @@ class CustomTrainer(Trainer):
         pred = model(**inputs)
         
         loss = loss_fn(pred, labels)
+        
+        ## huggingface의 trainer 내부를 보면 outputs[1:] 이 부분이 있다.
+        ## 우선 huggingface trainer의 구조를 파악한 이후 근본적인 문제를 해결할 생각이다.
+        dummy = [0] * pred.shape[1]
+        dummy = torch.Tensor([dummy]).cuda()
+        pred = torch.cat([dummy, pred])
+        
         return (loss, pred) if return_outputs else loss
         
         
@@ -56,7 +64,8 @@ class MyTrainer():
         tokenizer,
         train_dataset: Dataset,
         val_dataset: Dataset,
-        config: Namespace
+        val_data: DataFrame,
+        config: Namespace,
         ):
         """`
         Trainer Class의 기본 setting 설정
@@ -78,12 +87,13 @@ class MyTrainer():
         ## Train & Validation Dataset
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
+        self.val_data = val_data
         
         ## 학습에 필요한 parameter 설정
         ## TODO: 여기에서 여러 가지의 하이퍼파라미터 설정해볼 수 있음 
         self.training_args = TrainingArguments(
             output_dir="./results",
-            save_total_limit=5,
+            save_total_limit=2,
             save_steps=500,
             num_train_epochs=config.epoch,
             learning_rate=config.lr,
@@ -96,14 +106,15 @@ class MyTrainer():
             evaluation_strategy='steps',
             eval_steps=500,
             load_best_model_at_end=True,
-            fp16=False,
+            fp16=True,
         )
         
     def train(self):
         """
         Huggingface 라이브러리를 사용해 학습
-        """        
-        trainer = CustomTrainer(
+        """
+        ## TODO: CustomTrainer는 나중에 다시 적용하겠음 
+        trainer = Trainer(
             model=self.model,
             args=self.training_args,
             train_dataset=self.train_dataset,
@@ -114,7 +125,7 @@ class MyTrainer():
         trainer.train()
         self.save()
 
-    def save(self): self.model.save_pretrained(self.config.save_path)
+    def save(self): torch.save(self.model.state_dict(), self.config.save_path)
         
     def klue_re_micro_f1(self, preds, labels):
         """KLUE-RE micro f1 (except no_relation)"""
@@ -156,7 +167,10 @@ class MyTrainer():
             print("labels :", labels.shape, "preds :", preds.shape)
             acc = accuracy_score(labels, preds)
             return {"accuracy": acc}
-            
+        
+        ## 저장
+        self.save()
+        
         # calculate accuracy using sklearn's function
         f1 = self.klue_re_micro_f1(preds, labels)
         auprc = self.klue_re_auprc(probs, labels)
