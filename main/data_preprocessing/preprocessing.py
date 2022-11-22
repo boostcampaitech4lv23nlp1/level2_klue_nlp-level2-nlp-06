@@ -9,12 +9,14 @@ from pandas import DataFrame
 from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
+from transformers import AutoTokenizer
+
 
 class Preprocessing():
     """
     전처리를 담당하는 Class
     """    
-    def __init__(self, config: Namespace, tokenizer):
+    def __init__(self, config: Namespace):
         """
         전처리한 데이터를 처리하는 부분
 
@@ -26,7 +28,7 @@ class Preprocessing():
         self.config = config
         
         ## Tokenizer
-        self.tokenizer = tokenizer
+        self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
         
         ## Load dataset & DataLoader
         self.train_data = pd.read_csv(self.config.train_data_path)
@@ -35,15 +37,21 @@ class Preprocessing():
         self.train_dataset = None
         self.val_dataset = None
         self.test_dataset = None
+        self.label2num = None
         
         ## Get Label & Label encoding to number
-        ## input_type1 is for binary label.(related? not related?)
-        if self.config.input_type == 1:
-            self.label_to_num(self.train_data, binary_mode=True)
-            self.label_to_num(self.val_data, binary_mode=True)
-        else:
-            self.label_to_num(self.train_data)
-            self.label_to_num(self.val_data)
+        '''
+        mode : '모델'마다 분류해야 하는 개수가 다르기 때문에 만든 변수.
+        'base' : 30개의 라벨로 분류.
+        'rescent' : 그룹에 맞는 라벨 수로 분류.
+        '''
+        modes = {0: "base", 1: "rescent"}
+        mode = modes[self.config.model_type]
+        self.label_to_num(self.train_data, mode=mode)
+        self.label_to_num(self.val_data, mode=mode)
+        print("Label has been mapped to :", self.label2num)
+        ## Transformer 모델의 linear output 수를 조절하기 위해 변수 추가.
+        self.classes = len(self.label2num)
         
         ## Seperate obj & subj
         self.preprocessing_dataset(self.train_data)
@@ -56,7 +64,7 @@ class Preprocessing():
             self.simple_concat(self.train_data)
             self.simple_concat(self.test_data)
             self.simple_concat(self.val_data)
-        elif self.config.input_type == 2:
+        if self.config.input_type == 1:
             self.typed_entity_marker_punct_kr(self.train_data)
             self.typed_entity_marker_punct_kr(self.val_data)
             self.typed_entity_marker_punct_kr(self.test_data)
@@ -193,24 +201,21 @@ class Preprocessing():
             self.train_data = train_data.sample(n=len(train_data), replace=False)
             self.val_data = val_data.sample(n=len(val_data), replace=False)
             
-    def label_to_num(self, data, binary_mode=False):
+    def label_to_num(self, data, mode="base"):
         """
         data의 label을 숫자로 encoding하는 함수
         """
-        if binary_mode:
-            encoded_label = []
+        assert mode in ["base", "rescent"], 'model type should be in ["base", "rescent"]'
+        encoded_label = []
+        if mode == "rescent":
+            self.label2num = {label: i for i, label in enumerate(data['label'].unique())}
             for i in range(len(data)):
-                if data['label'].iloc[i] == "no_relation":
-                    encoded_label.append(0)
-                else:
-                    encoded_label.append(1)
+                encoded_label.append(self.label2num[data['label'].iloc[i]])
         else:
             with open("./source/dict_label_to_num.pkl", "rb") as f:
-                dict_label_to_num = pickle.load(f)
-            
-            encoded_label = []
+                self.label2num = pickle.load(f)
             for i in range(len(data)):
-                encoded_label.append(dict_label_to_num[data["label"].iloc[i]])
+                encoded_label.append(self.label2num[data["label"].iloc[i]])
         
         data["encoded_label"] = encoded_label
     
@@ -218,9 +223,9 @@ class Preprocessing():
         """
         train loader와 validation loader를 생성하는 함수
         """                
-        self.train_dataset = DataSet(self.train_data, self.tokenizer, self.config)
-        self.val_dataset = DataSet(self.val_data, self.tokenizer, self.config)
-        self.test_dataset = DataSetTest(self.test_data, self.tokenizer, self.config)
+        self.train_dataset = DataSet(self.train_data, self.tokenizer, self.config, self.label2num)
+        self.val_dataset = DataSet(self.val_data, self.tokenizer, self.config, self.label2num)
+        self.test_dataset = DataSetTest(self.test_data, self.tokenizer, self.config, self.label2num)
     
     ## ALL Get Method
     def get_train_dataset(self): return self.train_dataset
@@ -234,7 +239,7 @@ class DataSet(Dataset):
     """
     데이터를 처리하여 추출하는 Class
     """    
-    def __init__(self, data: DataFrame, tokenizer, config: Namespace):
+    def __init__(self, data: DataFrame, tokenizer, config: Namespace, label2num):
         """
         설정 값 및 tokenizer를 initializing
 
@@ -245,6 +250,7 @@ class DataSet(Dataset):
         """        
         ## Setting
         self.config = config
+        self.label2num = label2num
         
         ## Data & Tokenizer
         self.data = data
@@ -290,7 +296,7 @@ class DataSetTest(Dataset):
     """
     데이터를 처리하여 추출하는 Class
     """    
-    def __init__(self, data: DataFrame, tokenizer, config: Namespace):
+    def __init__(self, data: DataFrame, tokenizer, config: Namespace, label2num: dict):
         """
         설정 값 및 tokenizer를 initializing
 
@@ -301,11 +307,11 @@ class DataSetTest(Dataset):
         """        
         ## Setting
         self.config = config
+        self.label2num = label2num
         
         ## Data & Tokenizer
         self.data = data
         self.tokenizer = tokenizer
-        #self.labels = list(data["encoded_label"])
 
     def __getitem__(self, idx: int) -> Tuple[Tensor, Tensor, Tensor, int]:
         """
@@ -339,3 +345,4 @@ class DataSetTest(Dataset):
             int: 이 Dataset의 전체 데이터 길이
         """        
         return len(self.data)
+    

@@ -44,6 +44,10 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_entity", type=str)
     parser.add_argument("--wandb_name", type=str)
     parser.add_argument("--wandb_group", type=str)
+    parser.add_argument("--wandb_note", type=str)
+    parser.add_argument("--checkpoint_dir", type=str)
+    parser.add_argument("--warmup_step", type=int)
+    parser.add_argument("--eval_step", type=int)
     
     ## Set seed
     set_seeds(6)
@@ -56,26 +60,27 @@ if __name__ == "__main__":
     config.device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
     
     ## Wandb
-    wandb.init(project=config.wandb_project, name=config.wandb_name, notes="binary classification", entity=config.wandb_entity, group=config.wandb_group)
-    
-    ## Get transformer & tokenizer
-    selection = Selection(config)
-    model = selection.get_model()
-    tokenizer = selection.get_tokenizer()
+    wandb.init(project=config.wandb_project, name=config.wandb_name, notes=config.wandb_note, entity=config.wandb_entity, group=config.wandb_group)
     
     ## Data preprocessing
-    preprocessing = Preprocessing(config, tokenizer)
+    preprocessing = Preprocessing(config)
     train_dataset = preprocessing.get_train_dataset()
     val_dataset = preprocessing.get_val_dataset()
     test_dataset = preprocessing.get_test_dataset()
     val_data = preprocessing.get_val_data()
     test_data = preprocessing.get_test_data()
+    ## set classify numbers.
+    config.num_labels = preprocessing.classes
+    
+    ## Get transformer & tokenizer
+    selection = Selection(config)
+    model = selection.get_model()
     
     ## Training
-    trainer = MyTrainer(model, tokenizer, train_dataset, val_dataset, val_data, config)
+    trainer = MyTrainer(model, preprocessing.tokenizer, train_dataset, val_dataset, val_data, config)
     
     print("-----------------Start Training-----------------")
-    #trainer.train()
+    trainer.train()
     print("-----------------Finish Training-----------------")
     
     ## Testing

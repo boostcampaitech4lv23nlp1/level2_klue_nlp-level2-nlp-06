@@ -27,7 +27,7 @@ class Test():
         ## Get model and tokenizer
         selection = Selection(config)
         self.model = selection.get_model()
-        self.tokenizer = selection.get_tokenizer()
+        self.tokenizer = self.test_dataset.tokenizer
         self.model.load_state_dict(torch.load(self.config.save_path))
         self.model.to(self.device)
         self.model.eval()
@@ -38,6 +38,7 @@ class Test():
         
         self.dataloader = DataLoader(self.test_dataset, batch_size=16, shuffle=False)
         
+    ## TODO: 왜 Test는 하나씩 하고 있냐 느리잖아
     def test(self):
         
         for i in range(len(self.test_dataset)):
@@ -47,7 +48,7 @@ class Test():
             with torch.no_grad():
                 pred = self.model(**out)
             
-            prob = F.softmax(pred["logits"], dim=-1).detach().cpu().numpy()
+            prob = F.softmax(pred, dim=-1).detach().cpu().numpy()
             result = np.argmax(prob, axis=-1)
             
             self.test_label_store.append(result)

@@ -4,10 +4,11 @@ from argparse import Namespace
 from transformers import AutoTokenizer, AutoModel, AutoConfig, AutoModelForSequenceClassification
 from model.models import TransformerModel
 
+
 class Selection():
     """ 
     Select model
-    """    
+    """
     def __init__(self, config: Namespace):
         """ 
         Initalization
@@ -20,42 +21,36 @@ class Selection():
         
         ## Initialize transformer & tokenizer & model
         transformer = None
-        self.tokenizer = None
         self.model = None
         
-        ## Classification with [ClS] or [MASK]
-        if self.config.model_type == 0:
+        ## TODO: 이 부분 좀 더 깔끔하게. 나중에 GPT나 LSTM도 추가되면 그 때 하기.
+        transformer_models = [0, 1]
+        gpt_models = []
+        lstm_models = []
+        ## BERT model.
+        if self.config.model_type in transformer_models:
+            ## Classification with [ClS] or [MASK]
             ## Model config setting
             model_config = AutoConfig.from_pretrained(self.config.model_name)
-            model_config.num_labels = 30
-            
             ## Load transformer & tokenizer
-            #transformer = AutoModel.from_pretrained(self.config.model_name, config=model_config)
-            self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
+            transformer = AutoModel.from_pretrained(self.config.model_name, config=model_config)
             
             ## Get final model
-            self.model = AutoModelForSequenceClassification.from_pretrained(self.config.model_name, config=model_config)
-            #self.model = TransformerModel(transformer, config)
+            self.model = TransformerModel(transformer, self.config)
             self.model.config = model_config
-            
-        ## Model classify sentence to "no_relation" or "related"
-        elif self.config.model_type == 1:
-            model_config = AutoConfig.from_pretrained(self.config.model_name)
-            model_config.num_labels = 2
-            
-            #transformer = AutoModel.from_pretrained(self.config.model_name, config=model_config)
-            self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
-            
-            self.model = AutoModelForSequenceClassification.from_pretrained(self.config.model_name, config=model_config)
-            #self.model = TransformerModel(transformer, config)
-            self.model.config = model_config
-            
-            
         ## TODO: 다른 모델을 사용할 경우
+        '''
+        ## GPT model.
+        elif self.config.model_type in gpt_models:
+            ...
+        ## LSTM model.
+        elif self.config.model_type in lstm_models:
+            ...
+        '''
     
     def add_unk_token(self):
         pass
     
     ## Return model & tokenizer
     def get_model(self): return self.model
-    def get_tokenizer(self): return self.tokenizer
+    
