@@ -2,7 +2,7 @@ import torch.nn as nn
 
 from argparse import Namespace
 from transformers import AutoTokenizer, AutoModel, AutoConfig, AutoModelForSequenceClassification
-from model.models import TransformerModel
+from model.models import TransformerModel, TransformerModelUsingMask
 
 class Selection():
     """ 
@@ -23,19 +23,19 @@ class Selection():
         self.tokenizer = None
         self.model = None
         
-        ## Classification with [ClS] or [MASK]
+        ## Classification with [CLS] or [MASK]
         if self.config.model_type == 0:
             ## Model config setting
             model_config = AutoConfig.from_pretrained(self.config.model_name)
             model_config.num_labels = 30
             
             ## Load transformer & tokenizer
-            #transformer = AutoModel.from_pretrained(self.config.model_name, config=model_config)
+            transformer = AutoModel.from_pretrained(self.config.model_name, config=model_config)
             self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
             
             ## Get final model
-            self.model = AutoModelForSequenceClassification.from_pretrained(self.config.model_name, config=model_config)
-            #self.model = TransformerModel(transformer, config)
+            #self.model = AutoModelForSequenceClassification.from_pretrained(self.config.model_name, config=model_config)
+            self.model = TransformerModel(transformer, config)
             self.model.config = model_config
             
         ## Model classify sentence to "no_relation" or "related"
@@ -49,7 +49,24 @@ class Selection():
             self.model = AutoModelForSequenceClassification.from_pretrained(self.config.model_name, config=model_config)
             #self.model = TransformerModel(transformer, config)
             self.model.config = model_config
+
+        ## MLM
+        elif self.config.model_type == 2:
+            ## Model config setting
+            model_config = AutoConfig.from_pretrained(self.config.model_name)
+            model_config.num_labels = 30
             
+            ## Load transformer & tokenizer
+            transformer = AutoModel.from_pretrained(
+                self.config.model_name,
+                config=model_config,
+                add_pooling_layer=False)
+
+            self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
+            
+            ## Get final model
+            self.model = TransformerModelUsingMask(transformer, self.tokenizer.mask_token_id, config)
+            self.model.config = model_config
             
         ## TODO: 다른 모델을 사용할 경우
     
