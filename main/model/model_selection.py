@@ -30,12 +30,12 @@ class Selection():
             model_config.num_labels = 30
             
             ## Load transformer & tokenizer
-            transformer = AutoModel.from_pretrained(self.config.model_name, config=model_config)
+            # transformer = AutoModel.from_pretrained(self.config.model_name, config=model_config)
             self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
             
             ## Get final model
-            #self.model = AutoModelForSequenceClassification.from_pretrained(self.config.model_name, config=model_config)
-            self.model = TransformerModel(transformer, config)
+            self.model = AutoModelForSequenceClassification.from_pretrained(self.config.model_name, config=model_config)
+            # self.model = TransformerModel(transformer, config)
             self.model.config = model_config
             
         ## Model classify sentence to "no_relation" or "related"
