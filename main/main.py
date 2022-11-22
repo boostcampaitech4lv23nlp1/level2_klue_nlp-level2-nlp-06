@@ -35,6 +35,7 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float)
     parser.add_argument("--input_type", type=int)
     parser.add_argument("--model_type", type=int)
+    parser.add_argument("--train_type", type=int)
     parser.add_argument("--train_data_path", type=str)
     parser.add_argument("--val_data_path", type=str)
     parser.add_argument("--test_data_path", type=str)
@@ -73,7 +74,7 @@ if __name__ == "__main__":
     config.num_labels = preprocessing.classes
     
     ## Get transformer & tokenizer
-    selection = Selection(config)
+    selection = Selection(config, preprocessing.mask_id)
     model = selection.get_model()
     
     ## Training

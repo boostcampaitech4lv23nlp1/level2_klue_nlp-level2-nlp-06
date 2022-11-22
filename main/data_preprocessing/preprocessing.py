@@ -29,6 +29,7 @@ class Preprocessing():
         
         ## Tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
+        self.mask_id = self.tokenizer.mask_token_id
         
         ## Load dataset & DataLoader
         self.train_data = pd.read_csv(self.config.train_data_path)
@@ -45,8 +46,8 @@ class Preprocessing():
         'base' : 30개의 라벨로 분류.
         'rescent' : 그룹에 맞는 라벨 수로 분류.
         '''
-        modes = {0: "base", 1: "rescent", 2: "base"}
-        mode = modes[self.config.model_type]
+        modes = {0: "base", 1: "rescent"}
+        mode = modes[self.config.train_type]
         self.label_to_num(self.train_data, mode=mode)
         self.label_to_num(self.val_data, mode=mode)
         print("Label has been mapped to :", self.label2num)
