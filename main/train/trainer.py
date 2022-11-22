@@ -56,7 +56,7 @@ class CustomTrainer(Trainer):
         
 class MyTrainer():
     """
-    Train stpe을 구현한 Class
+    Train step을 구현한 Class
     """    
     def __init__(
         self, 
@@ -90,7 +90,7 @@ class MyTrainer():
         self.val_data = val_data
         
         ## 학습에 필요한 parameter 설정
-        ## TODO: 여기에서 여러 가지의 하이퍼파라미터 설정해볼 수 있음 
+        ## TODO: 여기에서 여러 가지의 하이퍼파라미터 설정해볼 수 있음
         self.training_args = TrainingArguments(
             output_dir="./results",
             save_total_limit=2,
@@ -114,7 +114,7 @@ class MyTrainer():
         Huggingface 라이브러리를 사용해 학습
         """
         ## TODO: CustomTrainer는 나중에 다시 적용하겠음 
-        trainer = Trainer(
+        trainer = CustomTrainer(
             model=self.model,
             args=self.training_args,
             train_dataset=self.train_dataset,
