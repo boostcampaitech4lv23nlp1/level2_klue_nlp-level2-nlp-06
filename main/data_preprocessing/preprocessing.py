@@ -60,6 +60,11 @@ class Preprocessing():
             self.typed_entity_marker_punct_kr(self.train_data)
             self.typed_entity_marker_punct_kr(self.val_data)
             self.typed_entity_marker_punct_kr(self.test_data)
+        ## MLM
+        elif self.config.input_type == 3:
+            self.concat_and_mask(self.train_data)
+            self.concat_and_mask(self.val_data)
+            self.concat_and_mask(self.test_data)
         
         ## Train & Validation Seperation
         ## TODO: Validation dataset Seperation or other method
@@ -166,6 +171,17 @@ class Preprocessing():
                 new_s = s1 + subject_entity + s2 + object_entity + s3
             store.append(new_s)
         data["sentence"] = store
+    
+    def concat_and_mask(self, data):
+        """
+        MLM을 위해 관계 부분을 masking한 문장 만드는 함수
+        """
+        new_sentences = []
+        for i in range(len(data)):
+            new_sentences.append(
+                f'{data["sentence"][i]} {self.tokenizer.sep_token} {data["sub_word"][i]}와 {data["obj_word"][i]}의 관계는 {self.tokenizer.mask_token}'
+            )
+        data["sentence"] = new_sentences
     
     def seperate_train_val(self):
         """
