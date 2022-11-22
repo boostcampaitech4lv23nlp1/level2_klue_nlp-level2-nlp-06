@@ -46,8 +46,11 @@ class Test():
 
             with torch.no_grad():
                 pred = self.model(**out)
+                if self.config.model_type == 2:
+                    prob = F.softmax(pred, dim=-1).detach().cpu().numpy()
+                else:
+                    prob = F.softmax(pred["logits"], dim=-1).detach().cpu().numpy()
             
-            prob = F.softmax(pred["logits"], dim=-1).detach().cpu().numpy()
             result = np.argmax(prob, axis=-1)
             
             self.test_label_store.append(result)
