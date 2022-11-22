@@ -92,7 +92,7 @@ class MyTrainer():
         self.val_data = val_data
         
         ## 학습에 필요한 parameter 설정
-        ## TODO: 여기에서 여러 가지의 하이퍼파라미터 설정해볼 수 있음 
+        ## TODO: 여기에서 여러 가지의 하이퍼파라미터 설정해볼 수 있음
         self.training_args = TrainingArguments(
             output_dir=config.checkpoint_dir,
             save_total_limit=5,

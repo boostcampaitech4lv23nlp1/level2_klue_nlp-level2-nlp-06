@@ -38,17 +38,16 @@ class Test():
         
         self.dataloader = DataLoader(self.test_dataset, batch_size=16, shuffle=False)
         
-    ## TODO: 왜 Test는 하나씩 하고 있냐 느리잖아
+    ## TODO: Test도 배치 단위로 해서 빠르게 수행하기.
     def test(self):
-        
         for i in range(len(self.test_dataset)):
             out = self.test_dataset[i]
             out = out.to(self.device)
 
             with torch.no_grad():
                 pred = self.model(**out)
+                prob = F.softmax(pred, dim=-1).detach().cpu().numpy()
             
-            prob = F.softmax(pred, dim=-1).detach().cpu().numpy()
             result = np.argmax(prob, axis=-1)
             
             self.test_label_store.append(result)
