@@ -65,6 +65,11 @@ class Preprocessing():
             self.concat_and_mask(self.train_data)
             self.concat_and_mask(self.val_data)
             self.concat_and_mask(self.test_data)
+        ## R-BERT
+        elif self.config.input_type == 4:
+            self.temp_and_mark_pos(self.train_data)
+            self.temp_and_mark_pos(self.val_data)
+            self.temp_and_mark_pos(self.test_data)
         
         ## Train & Validation Seperation
         ## TODO: Validation dataset Seperation or other method
@@ -183,6 +188,60 @@ class Preprocessing():
             )
         data["sentence"] = new_sentences
     
+    def temp_and_mark_pos(self, data):
+        
+        dic = {"PER": "사람", "ORG": "조직", "LOC": "장소", "DAT": "일시", "POH": "명사", "NOH": "숫자"}
+
+        new_sub_start = []
+        new_sub_end = []
+        new_obj_start = []
+        new_obj_end = []
+        store = []
+        for i in range(len(data)):
+            s = data["sentence"][i]
+            sj = data["sub_word"][i]
+            s_s = int(data["sub_start"][i])
+            s_e = int(data["sub_end"][i])
+            s_t = data["sub_type"][i]
+            oj = data["obj_word"][i]
+            o_s = int(data["obj_start"][i])
+            o_e = int(data["obj_end"][i])
+            o_t = data["obj_type"][i]
+            
+            subject_entity = "@ " + "+ " + dic[s_t] + " + " + sj + " @ "
+            object_entity = "# " + "^ " + dic[o_t] + " ^ " + oj + " # "
+            
+            if s_e > o_e:
+                s1 = s[:o_s]
+                s2 = s[o_e+1:s_s]
+                s3 = s[s_e+1:]
+                new_s = s1 + object_entity + s2 + subject_entity + s3
+                new_s_s = s_s + 7 + len(dic[s_t]) + 12
+                new_s_e = new_s_s + len(sj) - 1
+                new_o_s = o_s + 7 + len(dic[o_t])
+                new_o_e = new_o_s + len(oj) - 1
+            else:
+                s1 = s[:s_s]
+                s2 = s[s_e+1:o_s]
+                s3 = s[o_e+1:]
+                new_s = s1 + subject_entity + s2 + object_entity + s3
+                new_s_s = s_s + 7 + len(dic[s_t])
+                new_s_e = new_s_s + len(sj) - 1
+                new_o_s = o_s + 7 + len(dic[o_t]) + 12
+                new_o_e = new_o_s + len(oj) - 1
+            
+            new_sub_start.append(new_s_s)
+            new_sub_end.append(new_s_e)
+            new_obj_start.append(new_o_s)
+            new_obj_end.append(new_o_e)
+            store.append(new_s)
+        
+        data["sentence"] = store
+        data["new_sub_start"] = new_sub_start
+        data["new_sub_end"] = new_sub_end
+        data["new_obj_start"] = new_obj_start
+        data["new_obj_end"] = new_obj_end
+    
     def seperate_train_val(self):
         """
         train data와 validation data를 간단하게 분리하는 함수
@@ -290,6 +349,45 @@ class DataSet(Dataset):
         out["attention_mask"] = out["attention_mask"][0]
         out["labels"] = torch.tensor(self.labels[idx])
         
+        if self.config.input_type == 4:
+            out["sub_entity_mask"] = [0] * len(out["input_ids"])
+            
+            s_s = self.data["new_sub_start"][idx]
+            tok_s_s = out.char_to_token(self.data["new_sub_start"][idx])
+            while tok_s_s is None:
+                s_s += 1
+                tok_s_s = out.char_to_token(s_s)
+            
+            s_e = self.data["new_sub_end"][idx]
+            tok_s_e = out.char_to_token(self.data["new_sub_end"][idx])
+            while tok_s_e is None:
+                s_e -= 1
+                tok_s_e = out.char_to_token(s_e)
+            
+            o_s = self.data["new_obj_start"][idx]
+            tok_o_s = out.char_to_token(self.data["new_obj_start"][idx])
+            while tok_o_s is None:
+                o_s += 1
+                tok_o_s = out.char_to_token(o_s)
+            
+            o_e = self.data["new_obj_end"][idx]
+            tok_o_e = out.char_to_token(self.data["new_obj_end"][idx])
+            while tok_o_e is None:
+                o_e -= 1
+                tok_o_e = out.char_to_token(o_e)
+
+            for i in range(tok_s_s, tok_s_e + 1):
+                if i is None:
+                    continue
+                out["sub_entity_mask"][i] = 1
+            out["obj_entity_mask"] = [0] * len(out["input_ids"])
+            for i in range(tok_o_s, tok_o_e + 1):
+                if i is None:
+                    continue
+                out["obj_entity_mask"][i] = 1
+            out['sub_entity_mask'] = torch.tensor(out['sub_entity_mask'])
+            out['obj_entity_mask'] = torch.tensor(out['obj_entity_mask'])
+        
         return out
         
     def __len__(self) -> int:
@@ -345,6 +443,47 @@ class DataSetTest(Dataset):
         out["token_type_ids"] = out["token_type_ids"]
         out["attention_mask"] = out["attention_mask"]
         
+        if self.config.input_type == 4:
+            out["sub_entity_mask"] = [0] * len(out["input_ids"][0])
+            out["obj_entity_mask"] = [0] * len(out["input_ids"][0])
+            
+            s_s = self.data["new_sub_start"][idx]
+            tok_s_s = out.char_to_token(self.data["new_sub_start"][idx])
+            while tok_s_s is None:
+                s_s += 1
+                tok_s_s = out.char_to_token(s_s)
+            
+            s_e = self.data["new_sub_end"][idx]
+            tok_s_e = out.char_to_token(self.data["new_sub_end"][idx])
+            while tok_s_e is None:
+                s_e -= 1
+                tok_s_e = out.char_to_token(s_e)
+            
+            o_s = self.data["new_obj_start"][idx]
+            tok_o_s = out.char_to_token(self.data["new_obj_start"][idx])
+            while tok_o_s is None:
+                o_s += 1
+                tok_o_s = out.char_to_token(o_s)
+            
+            o_e = self.data["new_obj_end"][idx]
+            tok_o_e = out.char_to_token(self.data["new_obj_end"][idx])
+            while tok_o_e is None:
+                o_e -= 1
+                tok_o_e = out.char_to_token(o_e)
+
+            for i in range(tok_s_s, tok_s_e + 1):
+                if i is None:
+                    continue
+                out["sub_entity_mask"][i] = 1
+            
+            for i in range(tok_o_s, tok_o_e + 1):
+                if i is None:
+                    continue
+                out["obj_entity_mask"][i] = 1
+            
+            out['sub_entity_mask'] = torch.tensor(out['sub_entity_mask']).unsqueeze(0)
+            out['obj_entity_mask'] = torch.tensor(out['obj_entity_mask']).unsqueeze(0)
+
         return out
         
     def __len__(self) -> int:
