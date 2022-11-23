@@ -35,7 +35,6 @@ class Test():
         self.model.eval()
         
         ## Store
-        self.test_label_store = []
         self.test_prob_store = []
         
         self.dataloader = DataLoader(self.test_dataset, batch_size=16, shuffle=False)
@@ -43,20 +42,17 @@ class Test():
     ## TODO: Test도 배치 단위로 해서 빠르게 수행하기.
     def test(self):
         for data in tqdm(self.dataloader):
-            data = {k: v.to(self.device) for k, v in zip(data.keys(), data.values())}
-            data['input_ids'] = data['input_ids'].squeeze()
+            data = {k: v.squeeze().to(self.device) for k, v in data.items()}
 
             with torch.no_grad():
                 pred = self.model(**data)
                 prob = F.softmax(pred, dim=-1).detach().cpu()
-            
-            result = torch.argmax(prob, dim=-1)
 
-            self.test_label_store.append(result.numpy().item())
             self.test_prob_store.append(prob)
             
-        self.test_prob_store = torch.cat(self.test_prob_store, dim=0).numpy()
-            
+        self.test_prob_store = torch.cat(self.test_prob_store, dim=0)
+        self.test_label_store = torch.argmax(self.test_prob_store, dim=-1)
+
         self.num_to_label()
         self.make_submission_file()
         
@@ -65,19 +61,20 @@ class Test():
         숫자로 encoding되어 있는 label을 실제 label로 decoding해주는 함수
         """        
         
-        dict_num_to_label = self.test_dataset.label2num
+        dict_num_to_label = {k: v for v, k in self.test_dataset.label2num.items()}
         
         decoded_label = []
-        for i in range(len(self.test_label_store)):
-            idx = self.test_label_store[i].tolist()[0]
-            decoded_label.append(dict_num_to_label[idx])
+        for pred in self.test_label_store:
+            decoded_label.append(dict_num_to_label[pred.item()])
         
         self.test_data["pred_label"] = decoded_label
-        self.test_data["probs"] = self.test_prob_store
+        self.test_data["probs"] = self.test_prob_store.tolist()
         
     def make_submission_file(self):
         """
         최종 파일을 저장하는 함수
-        """        
+        """
         final_output = self.test_data.loc[:, ["id", "pred_label", "probs"]]
         final_output.to_csv(self.config.result_path, index=False)
+        print("submission file created on", self.config.result_path)
+        
