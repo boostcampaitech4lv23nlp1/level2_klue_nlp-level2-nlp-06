@@ -8,6 +8,8 @@ from argparse import Namespace
 from model.model_selection import Selection
 from data_preprocessing.preprocessing import Preprocessing
 from torch.utils.data import Dataset, DataLoader
+from tqdm import tqdm
+
 
 class Test():
     """
@@ -25,7 +27,7 @@ class Test():
         self.test_data = test_data
         
         ## Get model and tokenizer
-        selection = Selection(config)
+        selection = Selection(config, self.test_dataset.tokenizer.mask_token_id)
         self.model = selection.get_model()
         self.tokenizer = self.test_dataset.tokenizer
         self.model.load_state_dict(torch.load(self.config.save_path))
@@ -40,18 +42,20 @@ class Test():
         
     ## TODO: Test도 배치 단위로 해서 빠르게 수행하기.
     def test(self):
-        for i in range(len(self.test_dataset)):
-            out = self.test_dataset[i]
-            out = out.to(self.device)
+        for data in tqdm(self.dataloader):
+            data = {k: v.to(self.device) for k, v in zip(data.keys(), data.values())}
+            data['input_ids'] = data['input_ids'].squeeze()
 
             with torch.no_grad():
-                pred = self.model(**out)
-                prob = F.softmax(pred, dim=-1).detach().cpu().numpy()
+                pred = self.model(**data)
+                prob = F.softmax(pred, dim=-1).detach().cpu()
             
-            result = np.argmax(prob, axis=-1)
+            result = torch.argmax(prob, dim=-1)
+
+            self.test_label_store.append(result.numpy().item())
+            self.test_prob_store.append(prob)
             
-            self.test_label_store.append(result)
-            self.test_prob_store.append(prob.tolist()[0])
+        self.test_prob_store = torch.cat(self.test_prob_store, dim=0).numpy()
             
         self.num_to_label()
         self.make_submission_file()
@@ -60,8 +64,8 @@ class Test():
         """
         숫자로 encoding되어 있는 label을 실제 label로 decoding해주는 함수
         """        
-        with open("./source/dict_num_to_label.pkl", "rb") as f:
-            dict_num_to_label = pickle.load(f)
+        
+        dict_num_to_label = self.test_dataset.label2num
         
         decoded_label = []
         for i in range(len(self.test_label_store)):

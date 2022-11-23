@@ -95,7 +95,7 @@ class MyTrainer():
         ## TODO: 여기에서 여러 가지의 하이퍼파라미터 설정해볼 수 있음
         self.training_args = TrainingArguments(
             output_dir=config.checkpoint_dir,
-            save_total_limit=5,
+            save_total_limit=2,
             save_steps=config.eval_step,
             num_train_epochs=config.epoch,
             learning_rate=config.lr,
@@ -103,7 +103,7 @@ class MyTrainer():
             per_device_eval_batch_size=config.batch_size,
             warmup_steps=config.warmup_step,
             weight_decay=0.01,
-            logging_dir='./logs',            
+            logging_dir='./logs',
             logging_steps=config.eval_step,
             evaluation_strategy='steps',
             eval_steps=config.eval_step,

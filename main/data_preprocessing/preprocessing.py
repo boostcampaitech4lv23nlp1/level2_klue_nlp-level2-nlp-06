@@ -239,7 +239,7 @@ class Preprocessing():
     def make_data_set(self):
         """
         train loader와 validation loader를 생성하는 함수
-        """                
+        """
         self.train_dataset = DataSet(self.train_data, self.tokenizer, self.config, self.label2num)
         self.val_dataset = DataSet(self.val_data, self.tokenizer, self.config, self.label2num)
         self.test_dataset = DataSetTest(self.test_data, self.tokenizer, self.config, self.label2num)
