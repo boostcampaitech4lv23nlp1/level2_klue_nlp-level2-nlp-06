@@ -49,6 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint_dir", type=str)
     parser.add_argument("--warmup_step", type=int)
     parser.add_argument("--eval_step", type=int)
+    parser.add_argument("--label_dict_dir", type=str)
     
     ## Set seed
     set_seeds(6)

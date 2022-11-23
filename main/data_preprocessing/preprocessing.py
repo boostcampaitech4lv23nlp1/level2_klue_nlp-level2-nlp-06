@@ -46,10 +46,8 @@ class Preprocessing():
         'base' : 30개의 라벨로 분류.
         'rescent' : 그룹에 맞는 라벨 수로 분류.
         '''
-        modes = {0: "base", 1: "rescent"}
-        mode = modes[self.config.train_type]
-        self.label_to_num(self.train_data, mode=mode)
-        self.label_to_num(self.val_data, mode=mode)
+        
+        self.set_label2num()
         print("Label has been mapped to :", self.label2num)
         ## Transformer 모델의 linear output 수를 조절하기 위해 변수 추가.
         self.classes = len(self.label2num)
@@ -82,6 +80,21 @@ class Preprocessing():
         ## Make data loader
         self.make_data_set()
         
+    def set_label2num(self):
+        modes = {0: "base", 1: "rescent"}
+        mode = modes[self.config.train_type]
+        if mode == "base":
+            with open("./source/dict_label_to_num.pkl", "rb") as f:
+                self.label2num = pickle.load(f)    
+        elif mode == "rescent":
+            labels = list(self.train_data["label"].unique()) + list(self.val_data["label"].unique())
+            labels = list(set(labels))
+            self.label2num = {label: i for i, label in enumerate(labels)}
+        # save label dict to 
+        with open(self.config.label_dict_dir, "wb") as f:
+            pickle.dump(self.label2num, f)
+        self.label_to_num(self.train_data)
+        self.label_to_num(self.val_data)
     
     def preprocessing_dataset(self, data: DataFrame):
         """
@@ -218,21 +231,13 @@ class Preprocessing():
             self.train_data = train_data.sample(n=len(train_data), replace=False)
             self.val_data = val_data.sample(n=len(val_data), replace=False)
             
-    def label_to_num(self, data, mode="base"):
+    def label_to_num(self, data):
         """
         data의 label을 숫자로 encoding하는 함수
         """
-        assert mode in ["base", "rescent"], 'model type should be in ["base", "rescent"]'
         encoded_label = []
-        if mode == "rescent":
-            self.label2num = {label: i for i, label in enumerate(data['label'].unique())}
-            for i in range(len(data)):
-                encoded_label.append(self.label2num[data['label'].iloc[i]])
-        else:
-            with open("./source/dict_label_to_num.pkl", "rb") as f:
-                self.label2num = pickle.load(f)
-            for i in range(len(data)):
-                encoded_label.append(self.label2num[data["label"].iloc[i]])
+        for label in list(data["label"]):
+            encoded_label.append(self.label2num[label])
         
         data["encoded_label"] = encoded_label
     
