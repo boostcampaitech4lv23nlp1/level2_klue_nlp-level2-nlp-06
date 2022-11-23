@@ -78,7 +78,7 @@ class MyTrainer():
             train_loader (Dataset): train dataset
             val_loader (Dataset): validation dataset
             config (NameSpace): Setting
-        """   
+        """
         ## Setting
         self.config = config
         
