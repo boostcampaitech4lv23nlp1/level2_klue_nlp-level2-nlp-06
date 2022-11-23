@@ -19,8 +19,8 @@ class Config:
         0 : base
         1 : binary classification
         '''
-        self.model_type: int = 0
-        self.input_type: int = 0
+        self.model_type: int = 2
+        self.input_type: int = 3
 
         ## 4. 모델 하이퍼파라미터
         self.num_hidden_layer: int = 0
