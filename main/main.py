@@ -75,7 +75,7 @@ if __name__ == "__main__":
     trainer = MyTrainer(model, tokenizer, train_dataset, val_dataset, val_data, config)
     
     print("-----------------Start Training-----------------")
-    #trainer.train()
+    trainer.train()
     print("-----------------Finish Training-----------------")
     
     ## Testing
