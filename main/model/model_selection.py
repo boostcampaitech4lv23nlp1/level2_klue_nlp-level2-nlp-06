@@ -4,75 +4,66 @@ from argparse import Namespace
 from transformers import AutoTokenizer, AutoModel, AutoConfig, AutoModelForSequenceClassification
 from model.models import TransformerModel, TransformerModelUsingMask
 
+
 class Selection():
     """ 
     Select model
-    """    
-    def __init__(self, config: Namespace):
+    """
+    def __init__(self, config: Namespace, mask_id):
         """ 
         Initalization
 
         Args:
             config (Namespace): 모든 설정 값을 저장하고 있는 것
+            mask_id(int): Masked_QA를 위한 tokenizer의 mask_id.
         """
         ## Parameters
         self.config = config
+        self.mask_id = mask_id
         
         ## Initialize transformer & tokenizer & model
         transformer = None
-        self.tokenizer = None
         self.model = None
         
-        ## Classification with [CLS] or [MASK]
+        ## BERT model - Linear.
         if self.config.model_type == 0:
+            ## Classification with [ClS] or [MASK]
             ## Model config setting
             model_config = AutoConfig.from_pretrained(self.config.model_name)
-            model_config.num_labels = 30
-            
             ## Load transformer & tokenizer
-            # transformer = AutoModel.from_pretrained(self.config.model_name, config=model_config)
-            self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
-            
-            ## Get final model
-            self.model = AutoModelForSequenceClassification.from_pretrained(self.config.model_name, config=model_config)
-            # self.model = TransformerModel(transformer, config)
-            self.model.config = model_config
-            
-        ## Model classify sentence to "no_relation" or "related"
-        elif self.config.model_type == 1:
-            model_config = AutoConfig.from_pretrained(self.config.model_name)
-            model_config.num_labels = 2
-            
-            #transformer = AutoModel.from_pretrained(self.config.model_name, config=model_config)
-            self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
-            
-            self.model = AutoModelForSequenceClassification.from_pretrained(self.config.model_name, config=model_config)
-            #self.model = TransformerModel(transformer, config)
-            self.model.config = model_config
+            transformer = AutoModel.from_pretrained(self.config.model_name, config=model_config)
 
-        ## MLM
-        elif self.config.model_type == 2:
+            ## Get final model
+            self.model = TransformerModel(transformer, self.config)
+            self.model.config = model_config
+        ## Masked QA
+        elif self.config.model_type == 1:
             ## Model config setting
             model_config = AutoConfig.from_pretrained(self.config.model_name)
-            model_config.num_labels = 30
             
             ## Load transformer & tokenizer
             transformer = AutoModel.from_pretrained(
                 self.config.model_name,
                 config=model_config,
                 add_pooling_layer=False)
-
-            self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
             
             ## Get final model
-            self.model = TransformerModelUsingMask(transformer, self.tokenizer.mask_token_id, config)
+            self.model = TransformerModelUsingMask(transformer, self.mask_id, self.config)
             self.model.config = model_config
-            
+
         ## TODO: 다른 모델을 사용할 경우
+        '''
+        ## GPT model.
+        elif self.config.model_type == "GPT":
+            ...
+        ## LSTM model.
+        elif self.config.model_type in lstm_models:
+            ...
+        '''
     
     def add_unk_token(self):
         pass
     
     ## Return model & tokenizer
     def get_model(self): return self.model
-    def get_tokenizer(self): return self.tokenizer
+    
