@@ -164,7 +164,10 @@ class Preprocessing():
     
     def typed_entity_marker_punct_kr(self, data):
         
-        dic = {"PER": "사람", "ORG": "조직", "LOC": "장소", "DAT": "일시", "POH": "명사", "NOH": "숫자"}
+        # 수정사항 : tag(kor)->tag(eng) 사용 
+        # 설명했던 내용이랑 달라졌는데, 한국어 태그의 f1 score가 우수한 지점은 steps=4k 오버피팅이 발생하는 지점이었음
+        # 따라서 1.5k에서 성능이 우수한 tag(eng) 로 교체
+        # dic = {"PER": "사람", "ORG": "조직", "LOC": "장소", "DAT": "일시", "POH": "명사", "NOH": "숫자"}
     
         store = []
         for i in range(len(data)):
@@ -178,19 +181,21 @@ class Preprocessing():
             o_e = int(data["obj_end"][i])
             o_t = data["obj_type"][i]
             
-            subject_entity = "@ " + "+ " + dic[s_t] + " + " + sj + " @ "
-            object_entity = "# " + "^ " + dic[o_t] + " ^ " + oj + " # "
+            subject_entity = "@ " + "+ " + s_t + " + " + sj + " @ "
+            object_entity = "# " + "^ " + o_t + " ^ " + oj + " # "
             
             if s_e > o_e:
                 s1 = s[:o_s]
                 s2 = s[o_e+1:s_s]
                 s3 = s[s_e+1:]
-                new_s = s1 + object_entity + s2 + subject_entity + s3
+                new_s = subject_entity+" [SEP] "+object_entity+" [SEP] "+ s1+ object_entity + s2 + subject_entity + s3
             else:
                 s1 = s[:s_s]
                 s2 = s[s_e+1:o_s]
                 s3 = s[o_e+1:]
-                new_s = s1 + subject_entity + s2 + object_entity + s3
+                new_s = subject_entity+" [SEP] "+object_entity+" [SEP] "+ s1+ subject_entity+s2 + object_entity + s3
+
+                
             store.append(new_s)
         data["sentence"] = store
     
