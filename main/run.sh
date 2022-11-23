@@ -9,5 +9,6 @@ python3 main.py \
 --val_data_path=../dataset/train/train.csv \
 --test_data_path=../dataset/test/test_data.csv \
 --save_path=../dataset/pt_model/model-2.pt --result_path=../dataset/submission/sub-2.csv \
---wandb_project=koohack --wandb_entity=happy06 --wandb_name=temp \
+--checkpoint_dir=./results
+--wandb_project=koohack --wandb_entity=happy06 --wandb_name=temp --wandb_note=sample\
 

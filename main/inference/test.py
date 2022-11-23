@@ -8,6 +8,8 @@ from argparse import Namespace
 from model.model_selection import Selection
 from data_preprocessing.preprocessing import Preprocessing
 from torch.utils.data import Dataset, DataLoader
+from tqdm import tqdm
+
 
 class Test():
     """
@@ -25,37 +27,32 @@ class Test():
         self.test_data = test_data
         
         ## Get model and tokenizer
-        selection = Selection(config)
+        selection = Selection(config, self.test_dataset.tokenizer.mask_token_id)
         self.model = selection.get_model()
-        self.tokenizer = selection.get_tokenizer()
+        self.tokenizer = self.test_dataset.tokenizer
         self.model.load_state_dict(torch.load(self.config.save_path))
         self.model.to(self.device)
         self.model.eval()
         
         ## Store
-        self.test_label_store = []
         self.test_prob_store = []
         
         self.dataloader = DataLoader(self.test_dataset, batch_size=16, shuffle=False)
         
+    ## TODO: Test도 배치 단위로 해서 빠르게 수행하기.
     def test(self):
-        
-        for i in range(len(self.test_dataset)):
-            out = self.test_dataset[i]
-            out = out.to(self.device)
+        for data in tqdm(self.dataloader):
+            data = {k: v.squeeze().to(self.device) for k, v in data.items()}
 
             with torch.no_grad():
-                pred = self.model(**out)
-                if self.config.model_type == 2:
-                    prob = F.softmax(pred, dim=-1).detach().cpu().numpy()
-                else:
-                    prob = F.softmax(pred["logits"], dim=-1).detach().cpu().numpy()
+                pred = self.model(**data)
+                prob = F.softmax(pred, dim=-1).detach().cpu()
+
+            self.test_prob_store.append(prob)
             
-            result = np.argmax(prob, axis=-1)
-            
-            self.test_label_store.append(result)
-            self.test_prob_store.append(prob.tolist()[0])
-            
+        self.test_prob_store = torch.cat(self.test_prob_store, dim=0)
+        self.test_label_store = torch.argmax(self.test_prob_store, dim=-1)
+
         self.num_to_label()
         self.make_submission_file()
         
@@ -63,20 +60,21 @@ class Test():
         """
         숫자로 encoding되어 있는 label을 실제 label로 decoding해주는 함수
         """        
-        with open("./source/dict_num_to_label.pkl", "rb") as f:
-            dict_num_to_label = pickle.load(f)
+        
+        dict_num_to_label = {k: v for v, k in self.test_dataset.label2num.items()}
         
         decoded_label = []
-        for i in range(len(self.test_label_store)):
-            idx = self.test_label_store[i].tolist()[0]
-            decoded_label.append(dict_num_to_label[idx])
+        for pred in self.test_label_store:
+            decoded_label.append(dict_num_to_label[pred.item()])
         
         self.test_data["pred_label"] = decoded_label
-        self.test_data["probs"] = self.test_prob_store
+        self.test_data["probs"] = self.test_prob_store.tolist()
         
     def make_submission_file(self):
         """
         최종 파일을 저장하는 함수
-        """        
+        """
         final_output = self.test_data.loc[:, ["id", "pred_label", "probs"]]
         final_output.to_csv(self.config.result_path, index=False)
+        print("submission file created on", self.config.result_path)
+        
