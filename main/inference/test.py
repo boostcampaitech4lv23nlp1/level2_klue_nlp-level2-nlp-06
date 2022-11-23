@@ -46,7 +46,7 @@ class Test():
 
             with torch.no_grad():
                 pred = self.model(**out)
-                if self.config.model_type == 2:
+                if self.config.model_type == 2 or self.config.model_type == 3:
                     prob = F.softmax(pred, dim=-1).detach().cpu().numpy()
                 else:
                     prob = F.softmax(pred["logits"], dim=-1).detach().cpu().numpy()
