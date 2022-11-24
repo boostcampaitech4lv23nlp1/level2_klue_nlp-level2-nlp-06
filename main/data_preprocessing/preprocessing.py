@@ -92,9 +92,9 @@ class Preprocessing():
             labels = sorted(list(set(labels)))
             self.label2num = {label: i for i, label in enumerate(labels)}
 
-        # save label dict to 
-        with open(self.config.label_dict_dir, "wb") as f:
-            pickle.dump(self.label2num, f)
+            # save label dict to 
+            with open(self.config.label_dict_dir, "wb") as f:
+                pickle.dump(self.label2num, f)
         self.label_to_num(self.train_data)
         self.label_to_num(self.val_data)
     
