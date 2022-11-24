@@ -72,6 +72,12 @@ class Preprocessing():
             self.concat_and_mask(self.train_data)
             self.concat_and_mask(self.val_data)
             self.concat_and_mask(self.test_data)
+        #emp_front
+        elif self.config.input_type == 3:
+            self.typed_entity_marker_punct_front(self.train_data)
+            self.typed_entity_marker_punct_front(self.val_data)
+            self.typed_entity_marker_punct_front(self.test_data)
+
         
         ## Train & Validation Seperation
         ## TODO: Validation dataset Seperation or other method
@@ -91,8 +97,8 @@ class Preprocessing():
             labels = list(set(labels))
             self.label2num = {label: i for i, label in enumerate(labels)}
         # save label dict to 
-        with open(self.config.label_dict_dir, "wb") as f:
-            pickle.dump(self.label2num, f)
+            with open(self.config.label_dict_dir, "wb") as f:
+                pickle.dump(self.label2num, f)
         self.label_to_num(self.train_data)
         self.label_to_num(self.val_data)
     
@@ -165,10 +171,41 @@ class Preprocessing():
     def typed_entity_marker_punct_kr(self, data):
         
         # 수정사항 : tag(kor)->tag(eng) 사용 
-        # 설명했던 내용이랑 달라졌는데, 한국어 태그의 f1 score가 우수한 지점은 steps=4k 오버피팅이 발생하는 지점이었음
+        # 한국어 태그의 f1 score가 우수한 지점은 steps=4k 오버피팅이 발생하는 지점이었음
         # 따라서 1.5k에서 성능이 우수한 tag(eng) 로 교체
-        # dic = {"PER": "사람", "ORG": "조직", "LOC": "장소", "DAT": "일시", "POH": "명사", "NOH": "숫자"}
     
+        store = []
+        for i in range(len(data)):
+            s = data["sentence"][i]
+            sj = data["sub_word"][i]
+            s_s = int(data["sub_start"][i])
+            s_e = int(data["sub_end"][i])
+            s_t = data["sub_type"][i]
+            oj = data["obj_word"][i]
+            o_s = int(data["obj_start"][i])
+            o_e = int(data["obj_end"][i])
+            o_t = data["obj_type"][i]
+            
+            subject_entity = "@ " + "+ " + s_t + " + " + sj + " @ "
+            object_entity = "# " + "^ " + o_t + " ^ " + oj + " # "
+            
+            if s_e > o_e:
+                s1 = s[:o_s]
+                s2 = s[o_e+1:s_s]
+                s3 = s[s_e+1:]
+                new_s = s1+ object_entity + s2 + subject_entity + s3
+            else:
+                s1 = s[:s_s]
+                s2 = s[s_e+1:o_s]
+                s3 = s[o_e+1:]
+                new_s = s1+ subject_entity+s2 + object_entity + s3
+
+                
+            store.append(new_s)
+        data["sentence"] = store
+
+    def typed_entity_marker_punct_front(self, data):
+            
         store = []
         for i in range(len(data)):
             s = data["sentence"][i]
@@ -198,6 +235,7 @@ class Preprocessing():
                 
             store.append(new_s)
         data["sentence"] = store
+
     
     def concat_and_mask(self, data):
         """
