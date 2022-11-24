@@ -72,6 +72,12 @@ class Preprocessing():
             self.concat_and_mask(self.train_data)
             self.concat_and_mask(self.val_data)
             self.concat_and_mask(self.test_data)
+        #typed_entity_marker_front
+        if self.config.input_type == 3:
+            self.typed_entity_marker_punct_front(self.train_data)
+            self.typed_entity_marker_punct_front(self.val_data)
+            self.typed_entity_marker_punct_front(self.test_data)
+        
         
         ## Train & Validation Seperation
         ## TODO: Validation dataset Seperation or other method
@@ -194,6 +200,42 @@ class Preprocessing():
             store.append(new_s)
         data["sentence"] = store
     
+    def typed_entity_marker_punct_front(self, data):
+        
+        #typed_entity_marker_punct_kr에서 일부 수정되었습니다
+        #tag : kr -> eng
+        #sentence form :
+        #   before: @ + PER + 박수현 @ 은 오늘 # ^ LOC ^ 시청 # 에 들렀다
+        #   after : @ + PER + 박수현 @[SEP]# ^ LOC ^ 시청 #[SEP] @ + PER + 박수현 @ 은 오늘 # ^ LOC ^ 시청 # 에 들렀다
+        
+        store = []
+        for i in range(len(data)):
+            s = data["sentence"][i]
+            sj = data["sub_word"][i]
+            s_s = int(data["sub_start"][i])
+            s_e = int(data["sub_end"][i])
+            s_t = data["sub_type"][i]
+            oj = data["obj_word"][i]
+            o_s = int(data["obj_start"][i])
+            o_e = int(data["obj_end"][i])
+            o_t = data["obj_type"][i]
+            
+            subject_entity = "@ " + "+ " + sj + " + " + sj + " @ "
+            object_entity = "# " + "^ " + oj + " ^ " + oj + " # "
+            
+            if s_e > o_e:
+                s1 = s[:o_s]
+                s2 = s[o_e+1:s_s]
+                s3 = s[s_e+1:]
+                new_s = subject_entity + " [SEP] " + object_entity + " [SEP] " + s1 + object_entity + s2 + subject_entity + s3
+            else:
+                s1 = s[:s_s]
+                s2 = s[s_e+1:o_s]
+                s3 = s[o_e+1:]
+                new_s = object_entity + " [SEP] " + subject_entity + " [SEP] " + s1 + subject_entity + s2 + object_entity + s3
+            store.append(new_s)
+        data["sentence"] = store
+
     def concat_and_mask(self, data):
         """
         MLM을 위해 관계 부분을 masking한 문장 만드는 함수
