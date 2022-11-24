@@ -29,7 +29,10 @@ class Preprocessing():
         self.config = config
         
         ## Tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
+        if config.input_type in [4,5,6]:
+            self.tokenizer = AutoTokenizer.from_pretrained("./data_preprocessing/newtokenizer")
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
         self.mask_id = self.tokenizer.mask_token_id
         
         ## Load dataset & DataLoader
@@ -64,20 +67,15 @@ class Preprocessing():
             self.simple_concat(self.train_data)
             self.simple_concat(self.test_data)
             self.simple_concat(self.val_data)
-        if self.config.input_type == 1:
-            self.typed_entity_marker_punct_kr(self.train_data)
-            self.typed_entity_marker_punct_kr(self.val_data)
-            self.typed_entity_marker_punct_kr(self.test_data)
+        if self.config.input_type in [1,3,4,5,6]:
+            self.entity_marker(self.train_data, config.input_type)
+            self.entity_marker(self.val_data, config.input_type)
+            self.entity_marker(self.test_data, config.input_type)
         ## MLM
         elif self.config.input_type == 2:
             self.concat_and_mask(self.train_data)
             self.concat_and_mask(self.val_data)
             self.concat_and_mask(self.test_data)
-        #typed_entity_marker_front
-        if self.config.input_type == 3:
-            self.typed_entity_marker_punct_front(self.train_data)
-            self.typed_entity_marker_punct_front(self.val_data)
-            self.typed_entity_marker_punct_front(self.test_data)
         
         
         ## Train & Validation Seperation
@@ -169,8 +167,14 @@ class Preprocessing():
             store.append(obj[i]+" [SEP] "+sub[i]+" [SEP] "+sentence[i])
         data["sentence"] = store
     
-    def typed_entity_marker_punct_kr(self, data):
-        
+    def entity_marker(self, data, input_type):
+        '''
+        input type = 1  typed_entity_marker_punct_kr        :   @ + 사람 + 박수현 @ 은 오늘 # ^ 장소 ^ 시청 # 에 들렀다
+        input type = 3  typed_entity_marker_punct_kr_front  :   @ + PER + 박수현 @[SEP]# ^ LOC ^ 시청 #[SEP] @ + PER + 박수현 @ 은 오늘 # ^ LOC ^ 시청 # 에 들렀다
+        input type = 4  entity_mask                         :   [SUBJ-PER] 은 오늘 [OBJ-LOC] 에 들렀다
+        input type = 5  entity_marker                       :   [E1] 박수현 [/E1]은 오늘 [E2] 시청 [/E2] 에 들렀다
+        input type = 6  typed_entity_marker                 :   [S:PER] 박수현 [/S:PER] 은 오늘 [O:LOC] 시청 [/O:LOC] 에 들렀다. 
+        '''
         dic = {"PER": "사람", "ORG": "조직", "LOC": "장소", "DAT": "일시", "POH": "명사", "NOH": "숫자"}
     
         store = []
@@ -185,55 +189,38 @@ class Preprocessing():
             o_e = int(data["obj_end"][i])
             o_t = data["obj_type"][i]
             
-            subject_entity = "@ " + "+ " + dic[s_t] + " + " + sj + " @ "
-            object_entity = "# " + "^ " + dic[o_t] + " ^ " + oj + " # "
-            
+            if input_type == 1:
+                subject_entity = "@ " + "+ " + dic[s_t] + " + " + sj + " @ "
+                object_entity = "# " + "^ " + dic[o_t] + " ^ " + oj + " # "
+            elif input_type == 3:
+                subject_entity = "@ " + "+ " + s_t + " + " + sj + " @ "
+                object_entity = "# " + "^ " + o_t + " ^ " + oj + " # "
+            elif input_type == 4:
+                subject_entity = "[SUBJ-"+s_t+"]"
+                object_entity = "[OBJ-"+o_t+"]"
+            elif input_type == 5:
+                subject_entity = " [E1] " + sj + " [/E1] "
+                object_entity = " [E2] " + oj + " [/E2] "
+            elif input_type == 6:
+                subject_entity = " [S:"+s_t+"] " + sj + " [/S:"+s_t+"] "
+                object_entity = " [O:"+o_t+"] " + oj + " [/O:"+o_t+"] "
+
             if s_e > o_e:
                 s1 = s[:o_s]
                 s2 = s[o_e+1:s_s]
                 s3 = s[s_e+1:]
-                new_s = s1 + object_entity + s2 + subject_entity + s3
+                if input_type != 3:
+                    new_s = s1 + object_entity + s2 + subject_entity + s3
+                else:
+                    new_s = subject_entity + " [SEP] " + object_entity + " [SEP] " + s1 + object_entity + s2 + subject_entity + s3
             else:
                 s1 = s[:s_s]
                 s2 = s[s_e+1:o_s]
                 s3 = s[o_e+1:]
-                new_s = s1 + subject_entity + s2 + object_entity + s3
-            store.append(new_s)
-        data["sentence"] = store
-    
-    def typed_entity_marker_punct_front(self, data):
-        
-        #typed_entity_marker_punct_kr에서 일부 수정되었습니다
-        #tag : kr -> eng
-        #sentence form :
-        #   before: @ + PER + 박수현 @ 은 오늘 # ^ LOC ^ 시청 # 에 들렀다
-        #   after : @ + PER + 박수현 @[SEP]# ^ LOC ^ 시청 #[SEP] @ + PER + 박수현 @ 은 오늘 # ^ LOC ^ 시청 # 에 들렀다
-        
-        store = []
-        for i in range(len(data)):
-            s = data["sentence"][i]
-            sj = data["sub_word"][i]
-            s_s = int(data["sub_start"][i])
-            s_e = int(data["sub_end"][i])
-            s_t = data["sub_type"][i]
-            oj = data["obj_word"][i]
-            o_s = int(data["obj_start"][i])
-            o_e = int(data["obj_end"][i])
-            o_t = data["obj_type"][i]
-            
-            subject_entity = "@ " + "+ " + sj + " + " + sj + " @ "
-            object_entity = "# " + "^ " + oj + " ^ " + oj + " # "
-            
-            if s_e > o_e:
-                s1 = s[:o_s]
-                s2 = s[o_e+1:s_s]
-                s3 = s[s_e+1:]
-                new_s = subject_entity + " [SEP] " + object_entity + " [SEP] " + s1 + object_entity + s2 + subject_entity + s3
-            else:
-                s1 = s[:s_s]
-                s2 = s[s_e+1:o_s]
-                s3 = s[o_e+1:]
-                new_s = object_entity + " [SEP] " + subject_entity + " [SEP] " + s1 + subject_entity + s2 + object_entity + s3
+                if input_type != 3:
+                    new_s = s1 + subject_entity + s2 + object_entity + s3
+                else:
+                    new_s = subject_entity + " [SEP] " + object_entity + " [SEP] " + s1 + subject_entity + s2 + object_entity + s3
             store.append(new_s)
         data["sentence"] = store
 
