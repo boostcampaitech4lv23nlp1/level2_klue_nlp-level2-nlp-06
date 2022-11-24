@@ -10,6 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer
+import collections
 
 
 class Preprocessing():
@@ -94,7 +95,7 @@ class Preprocessing():
                 self.label2num = pickle.load(f)    
         elif mode == "rescent":
             labels = list(self.train_data["label"].unique()) + list(self.val_data["label"].unique())
-            labels = list(set(labels))
+            labels = sorted(list(set(labels)))
             self.label2num = {label: i for i, label in enumerate(labels)}
             # save label dict to 
             with open(self.config.label_dict_dir, "wb") as f:
