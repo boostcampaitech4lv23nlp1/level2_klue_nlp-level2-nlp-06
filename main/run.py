@@ -12,19 +12,20 @@ class Config:
         self.wandb_note: str = "'Roberta-large로 29개 라벨 학습.'" # wandb note
         
         ## 2. 데이터 위치 (csv 파일)
-        self.train_data_path: str = "../../dataset/train/train6/train_df.csv"
-        self.val_data_path: str = "../../dataset/valid/valid6/valid_df.csv"
+        self.train_data_path: str = "../../dataset/train/train_80.csv"
+        self.val_data_path: str = "../../dataset/valid/valid_20.csv"
         self.test_data_path: str = "../../dataset/test/test_data.csv"
 
         ## 3. 학습 설정
         '''
         train_type = {0: "base-model", 1: "rescent"}
         model_type = {0: "base-model", 1: "Masked_QA"}
-        input_type = {0: "base-input", 1: "typed_punct_entity", 2: "Masked_QA"}
+        input_type = {0: "base-input", 1: "typed_punct_entity", 2: "Masked_QA", 3:"typed_punct_entity_front", 4: "entity_mask", 5: "entity_marker", 6:"typed_entity_marker"} 
+        
         '''
         self.train_type: int = 1
         self.model_type: int = 0
-        self.input_type: int = 0
+        self.input_type: int = 4
         self.epoch: int = 5
         self.checkpoint_dir: str = "./results/rescent/roberta-large/others" # Trainer의 학습 checkpoint 저장 경로.
         self.label_dict_dir: str = "./results/rescent/roberta-large/others/label2num.pickle" # RESCENT : label2num dictionary save path.
@@ -35,12 +36,21 @@ class Config:
         self.num_hidden_layer: int = 0 # BERT 뒤에 linear layer를 몇 개 쌓을지.
         self.mx_token_size: int = 256 # 문장 최대 길이
         self.batch_size: int = 32
-        self.lr: float = 5e-5
+        self.lr: float = 3e-5
 
         ## 5. 한번 바꾸면 바꿀일 없는 설정
         self.wandb_project: str = "KLUE_RE"
         self.wandb_entity: str = "happy06"
-        
+        '''
+        input type 에 대한 자세한 설명
+        input type = 0  base_input                          :   박수현 [SEP] 시청 [SEP] 박수현은 오늘 시청에 들렀다.
+        input type = 1  typed_entity_marker_punct_kr        :   @ + 사람 + 박수현 @ 은 오늘 # ^ 장소 ^ 시청 # 에 들렀다
+        input type = 2  Masked_QA                           :   박수현은 오늘 시청에 들렀다 [SEP] 박수현와 시청의 관계는 [MASK]
+        input type = 3  typed_entity_marker_punct_kr_front  :   @ + PER + 박수현 @[SEP]# ^ LOC ^ 시청 #[SEP] @ + PER + 박수현 @ 은 오늘 # ^ LOC ^ 시청 # 에 들렀다
+        input type = 4  entity_mask                         :   [SUBJ-PER] 은 오늘 [OBJ-LOC] 에 들렀다
+        input type = 5  entity_marker                       :   [E1] 박수현 [/E1]은 오늘 [E2] 시청 [/E2] 에 들렀다
+        input type = 6  typed_entity_marker                 :   [S:PER] 박수현 [/S:PER] 은 오늘 [O:LOC] 시청 [/O:LOC] 에 들렀다.
+        '''
 
 def cmd_parser(dic):
     cmd = "python3 main.py "
