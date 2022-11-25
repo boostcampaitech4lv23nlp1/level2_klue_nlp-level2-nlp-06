@@ -1,11 +1,18 @@
 import torch
 import torch.nn as nn
 
+
+def mean_pooling(model_output, attention_mask):
+    token_embeddings = model_output.last_hidden_state
+    input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+    return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+
 class TransformerModel(nn.Module):
     def __init__(self, transformer, config):
         super(TransformerModel, self).__init__()
         ## Setting
         self.config = config
+        self.pooling = self.config.pooling
         
         ## Transformer model
         self.transformer = transformer
@@ -21,6 +28,11 @@ class TransformerModel(nn.Module):
         layers.append(nn.Linear(self.h_dim, self.config.num_labels))
         self.sequence = nn.Sequential(*layers)
         
+        # BERT가 아닌 Electra, GPT 등의 모델인 경우, Pooling 레이어를 추가.
+        if "bert" not in self.config.model_name and self.pooling == "CLS":
+            self.pooler_linear = nn.Linear(self.h_dim, self.h_dim)
+            self.dropout = nn.Dropout(0.1)
+        
     def forward(self, *input, input_ids, token_type_ids, attention_mask, labels=None):
         ## Tranformer output
         x = self.transformer(
@@ -28,7 +40,20 @@ class TransformerModel(nn.Module):
             token_type_ids = token_type_ids, #kwargs["token_type_ids"],
             attention_mask = attention_mask, #kwargs["attention_mask"],
             return_dict = True,
-        ).pooler_output
+        )
+        
+        if self.pooling == "CLS":
+            # 'pooler_output'이 있는 bert 모델은, 
+            if 'pooler_output' in x.keys():
+                x = x.pooler_output
+            # 'pooler_output'이 없는 bert 이외의 모델은, (Electra)
+            else:
+                # Get CLS token output from last hidden_state
+                x = x.last_hidden_state[:, 0, :]
+                x = self.pooler_linear(x)
+                x = self.dropout(x)
+        elif self.pooling == "MEAN":
+            x = mean_pooling(x, attention_mask)
         
         ## Classification layer
         out = self.sequence(x)
