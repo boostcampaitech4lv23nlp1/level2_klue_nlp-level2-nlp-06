@@ -7,9 +7,9 @@ class Config:
         self.model_name: str = "klue/roberta-large"
         self.save_path: str = "../../saved_model/tt.pt" # 최종 모델을 어디에 저장할지
         self.result_path: str = "../../dataset/submission.csv" # 마지막 csv 파일을 어디에 저장할지
-        self.wandb_name: str = "'roberta-large: total'" # wandb 내에서 작업 이름 설정 (중요)
-        self.wandb_group: str = "is_related?" # wandb group.
-        self.wandb_note: str = "'roberta-large로 그냥 모두 train한 경우'" # wandb note
+        self.wandb_name: str = "'add lstm test1'" # wandb 내에서 작업 이름 설정 (중요)
+        self.wandb_group: str = "'add rnn test'" # wandb group.
+        self.wandb_note: str = "'lstm, num_layers=2, bias=True, dropout=0.1, bidirectional=True'" # wandb note
         
         ## 2. 데이터 위치 (csv 파일)
         self.train_data_path: str = "../../dataset/train/train8/total_train.csv"
