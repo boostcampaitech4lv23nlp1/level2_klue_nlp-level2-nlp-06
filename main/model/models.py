@@ -13,6 +13,7 @@ class TransformerModel(nn.Module):
         ## Setting
         self.config = config
         self.pooling = self.config.pooling
+        self.rnn_type = self.config.rnn_type
         
         ## Transformer model
         self.transformer = transformer
@@ -78,6 +79,7 @@ class TransformerModelUsingMask(nn.Module):
         ## Setting
         self.config = config
         self.mask_token_id = mask_token_id
+        self.rnn_type = self.config.rnn_type
         
         ## Transformer model
         self.transformer = transformer
