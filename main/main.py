@@ -52,6 +52,8 @@ if __name__ == "__main__":
     parser.add_argument("--label_dict_dir", type=str)
     parser.add_argument("--pooling", type=str)
     parser.add_argument("--weighted_loss", type=bool)
+    parser.add_argument("--rnn_type", type=str)
+    parser.add_argument("--num_rnn_layer", type=int)
     
     ## Set seed
     set_seeds(6)

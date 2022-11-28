@@ -39,6 +39,8 @@ class Config:
         self.batch_size: int = 32
         self.lr: float = 3e-5
         self.weighted_loss: bool = True # True로 설정할 경우 label distribution에 따라 weighted loss를 수행.
+        self.rnn_type: str = 'lstm' #['lstm', 'gru']
+        self.num_rnn_layer: int = 1
 
         ## 5. 한번 바꾸면 바꿀일 없는 설정
         self.wandb_project: str = "KLUE_RE"
