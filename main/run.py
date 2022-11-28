@@ -24,9 +24,10 @@ class Config:
         
         '''
         self.train_type: int = 0
-        self.model_type: int = 0
+        self.model_type: int = 1
         self.input_type: int = 1
         self.pooling = "MEAN" # 어떤 pooler output을 사용할 것인지 : ["MEAN", "CLS"]
+        self.rnn_type: str = 'lstm' #['lstm', 'gru', None(사용 안함)] - rnn_type 사용 시 pooling은 적용되지 않음. 참고.
         self.epoch: int = 3
         self.checkpoint_dir: str = "./results/rescent/roberta-large/total" # Trainer의 학습 checkpoint 저장 경로.
         self.label_dict_dir: str = "./results/rescent/roberta-large/total/label2num.pickle" # RESCENT : label2num dictionary save path.
@@ -39,8 +40,6 @@ class Config:
         self.batch_size: int = 32
         self.lr: float = 3e-5
         self.weighted_loss: bool = True # True로 설정할 경우 label distribution에 따라 weighted loss를 수행.
-        self.rnn_type: str = 'lstm' #['lstm', 'gru']
-        self.num_rnn_layer: int = 1
 
         ## 5. 한번 바꾸면 바꿀일 없는 설정
         self.wandb_project: str = "KLUE_RE"
