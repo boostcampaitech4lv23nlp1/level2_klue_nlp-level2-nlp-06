@@ -22,7 +22,12 @@ class TransformerModel(nn.Module):
         
         ## Layers
         layers = []
-        for i in range(self.config.num_hidden_layer): 
+        if self.config.rnn_type == "lstm":
+            self.lstm = nn.LSTM(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
+        elif self.config.rnn_type == "gru":
+            self.gru = nn.GRU(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
+        
+        for i in range(self.config.num_hidden_layer):
             layers.append(nn.Linear(self.h_dim, self.h_dim))
             layers.append(nn.ReLU())
         layers.append(nn.Linear(self.h_dim, self.config.num_labels))
@@ -42,18 +47,22 @@ class TransformerModel(nn.Module):
             return_dict = True,
         )
         
-        if self.pooling == "CLS":
-            # 'pooler_output'이 있는 bert 모델은, 
-            if 'pooler_output' in x.keys():
-                x = x.pooler_output
-            # 'pooler_output'이 없는 bert 이외의 모델은, (Electra)
-            else:
-                # Get CLS token output from last hidden_state
-                x = x.last_hidden_state[:, 0, :]
-                x = self.pooler_linear(x)
-                x = self.dropout(x)
-        elif self.pooling == "MEAN":
-            x = mean_pooling(x, attention_mask)
+        if self.config.rnn_type == "lstm":
+            x, (h_n, c_n) = self.lstm(x.last_hidden_state)
+            x = x[:, -1, :]
+        elif self.config.rnn_type == "gru":
+            x, h_n = self.gru(x.last_hidden_state)
+            x = x[:, -1, :]
+        else:
+            if self.pooling == "CLS":
+                if 'pooler_output' in x.keys():
+                    x = x.pooler_output
+                else:
+                    x = x.last_hidden_state[:, 0, :]
+                    x = self.pooler_linear(x)
+                    x = self.dropout(x)
+            elif self.pooling == "MEAN":
+                x = mean_pooling(x, attention_mask)
         
         ## Classification layer
         out = self.sequence(x)
