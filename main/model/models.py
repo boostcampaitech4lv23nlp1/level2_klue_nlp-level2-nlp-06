@@ -27,10 +27,10 @@ class TransformerModel(nn.Module):
             layers.append(nn.Linear(self.h_dim, self.h_dim))
             layers.append(nn.ReLU())
             
-        if self.config.rnn_type == "lstm":
+        if self.rnn_type == "lstm":
             self.lstm = nn.LSTM(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
             layers.append(nn.Linear(self.h_dim*2, self.config.num_labels))
-        elif self.config.rnn_type == "gru":
+        elif self.rnn_type == "gru":
             self.gru = nn.GRU(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
             layers.append(nn.Linear(self.h_dim*2, self.config.num_labels))
         else:
@@ -51,10 +51,10 @@ class TransformerModel(nn.Module):
             return_dict = True,
         )
         
-        if self.config.rnn_type == "lstm":
+        if self.rnn_type == "lstm":
             x, (h_n, c_n) = self.lstm(x.last_hidden_state)
             x = x[:, -1, :]
-        elif self.config.rnn_type == "gru":
+        elif self.rnn_type == "gru":
             x, h_n = self.gru(x.last_hidden_state)
             x = x[:, -1, :]
         else:
@@ -93,9 +93,9 @@ class TransformerModelUsingMask(nn.Module):
             layers.append(nn.Linear(self.h_dim, self.h_dim))
             layers.append(nn.ReLU())
             
-        if self.config.rnn_type == "lstm":
+        if self.rnn_type == "lstm":
             self.lstm = nn.LSTM(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
-        elif self.config.rnn_type == "gru":
+        elif self.rnn_type == "gru":
             self.gru = nn.GRU(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
         else:
             layers.append(nn.Linear(self.h_dim, self.config.num_labels))
@@ -110,9 +110,9 @@ class TransformerModelUsingMask(nn.Module):
             return_dict = True,
         ).last_hidden_state
         
-        if self.config.rnn_type == "lstm":
+        if self.rnn_type == "lstm":
             x, (h_n, c_n) = self.lstm(x)
-        elif self.config.rnn_type == "gru":
+        elif self.rnn_type == "gru":
             x, h_n = self.gru(x.last_hidden_state)
 
         x_mask = torch.stack([h[i.tolist().index(self.mask_token_id)] for h, i in zip(x, input_ids)])
