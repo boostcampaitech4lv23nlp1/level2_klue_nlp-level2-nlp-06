@@ -69,7 +69,7 @@ class Preprocessing():
             self.entity_marker(self.val_data, config.input_type)
             self.entity_marker(self.test_data, config.input_type)
         ## MLM
-        elif self.config.input_type == 2:
+        if self.config.model_type == 1:
             self.concat_and_mask(self.train_data)
             self.concat_and_mask(self.val_data)
             self.concat_and_mask(self.test_data)
