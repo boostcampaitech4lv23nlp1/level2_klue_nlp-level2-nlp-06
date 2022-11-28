@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 from argparse import Namespace
-from transformers import AutoTokenizer, AutoModel, AutoConfig, AutoModelForSequenceClassification
+from transformers import AutoTokenizer, AutoModel, AutoConfig, AutoModelForSequenceClassification, AutoModelForMaskedLM
 from model.models import TransformerModel, TransformerModelUsingMask
 
 
@@ -50,6 +50,13 @@ class Selection():
             ## Get final model
             self.model = TransformerModelUsingMask(transformer, self.mask_id, self.config)
             self.model.config = model_config
+        ## MLM Pretraining
+        elif self.config.model_type == 2:
+            model_config = AutoConfig.from_pretrained(self.config.model_name)
+            transformer = AutoModelForMaskedLM.from_pretrained(
+                self.config.model_name,
+                config=model_config
+            )
 
         ## TODO: 다른 모델을 사용할 경우
         '''

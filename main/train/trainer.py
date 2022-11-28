@@ -17,10 +17,14 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 from transformers import AutoConfig, Trainer, TrainingArguments
 
+
 ## TODO: 이 모듈을 사용해 loss function을 변경해볼 수 있다.
 class CustomTrainer(Trainer):
-    def __init__(self, **args):
+    def __init__(self, weights, **args):
         super(CustomTrainer, self).__init__(**args)
+        # for weighted CrossEntropy
+        self.weights = weights.to("cuda")
+
     """
     Huggingface의 trainer의 loss 부분 Overwrite 한 부분
 
@@ -38,8 +42,8 @@ class CustomTrainer(Trainer):
 
         Returns:
             _type_: _description_
-        """        
-        loss_fn = nn.CrossEntropyLoss()
+        """
+        loss_fn = nn.CrossEntropyLoss(self.weights)
         
         labels = inputs.get("labels")
         
@@ -61,13 +65,14 @@ class MyTrainer():
     Train stpe을 구현한 Class
     """
     def __init__(
-        self, 
-        model, 
-        tokenizer,
-        train_dataset: Dataset,
-        val_dataset: Dataset,
-        val_data: DataFrame,
-        config: Namespace,
+            self, 
+            model, 
+            tokenizer,
+            train_dataset: Dataset,
+            val_dataset: Dataset,
+            val_data: DataFrame,
+            config: Namespace,
+            weights: torch.Tensor,
         ):
         """`
         Trainer Class의 기본 setting 설정
@@ -81,6 +86,7 @@ class MyTrainer():
         """
         ## Setting
         self.config = config
+        self.weights = weights
         
         ## Model & Tokenizer
         self.model = model
@@ -121,6 +127,7 @@ class MyTrainer():
             train_dataset=self.train_dataset,
             eval_dataset=self.val_dataset,
             compute_metrics=self.compute_metrics,
+            weights=self.weights,
         )
         
         trainer.train()

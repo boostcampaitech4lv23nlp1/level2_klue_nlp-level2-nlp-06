@@ -51,6 +51,7 @@ if __name__ == "__main__":
     parser.add_argument("--eval_step", type=int)
     parser.add_argument("--label_dict_dir", type=str)
     parser.add_argument("--pooling", type=str)
+    parser.add_argument("--weighted_loss", type=bool)
     
     ## Set seed
     set_seeds(6)
@@ -80,7 +81,15 @@ if __name__ == "__main__":
     model = selection.get_model()
     
     ## Training
-    trainer = MyTrainer(model, preprocessing.tokenizer, train_dataset, val_dataset, val_data, config)
+    trainer = MyTrainer(
+        model=model, 
+        tokenizer=preprocessing.tokenizer, 
+        train_dataset=train_dataset, 
+        val_dataset=val_dataset, 
+        val_data=val_data, 
+        config=config, 
+        weights=preprocessing.weights
+    )
     
     print("-----------------Start Training-----------------")
     trainer.train()
