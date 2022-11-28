@@ -22,15 +22,18 @@ class TransformerModel(nn.Module):
         
         ## Layers
         layers = []
-        if self.config.rnn_type == "lstm":
-            self.lstm = nn.LSTM(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
-        elif self.config.rnn_type == "gru":
-            self.gru = nn.GRU(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
-        
         for i in range(self.config.num_hidden_layer):
             layers.append(nn.Linear(self.h_dim, self.h_dim))
             layers.append(nn.ReLU())
-        layers.append(nn.Linear(self.h_dim, self.config.num_labels))
+            
+        if self.config.rnn_type == "lstm":
+            self.lstm = nn.LSTM(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
+            layers.append(nn.Linear(self.h_dim*2, self.config.num_labels))
+        elif self.config.rnn_type == "gru":
+            self.gru = nn.GRU(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
+            layers.append(nn.Linear(self.h_dim*2, self.config.num_labels))
+        else:
+            layers.append(nn.Linear(self.h_dim, self.config.num_labels))
         self.sequence = nn.Sequential(*layers)
         
         # BERT가 아닌 Electra, GPT 등의 모델인 경우, Pooling 레이어를 추가.
@@ -87,7 +90,13 @@ class TransformerModelUsingMask(nn.Module):
         for i in range(self.config.num_hidden_layer): 
             layers.append(nn.Linear(self.h_dim, self.h_dim))
             layers.append(nn.ReLU())
-        layers.append(nn.Linear(self.h_dim, self.config.num_labels))
+            
+        if self.config.rnn_type == "lstm":
+            self.lstm = nn.LSTM(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
+        elif self.config.rnn_type == "gru":
+            self.gru = nn.GRU(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
+        else:
+            layers.append(nn.Linear(self.h_dim, self.config.num_labels))
         self.sequence = nn.Sequential(*layers)
         
     def forward(self, *input, input_ids, token_type_ids, attention_mask, labels=None):
@@ -98,6 +107,11 @@ class TransformerModelUsingMask(nn.Module):
             attention_mask = attention_mask, #kwargs["attention_mask"],
             return_dict = True,
         ).last_hidden_state
+        
+        if self.config.rnn_type == "lstm":
+            x, (h_n, c_n) = self.lstm(x)
+        elif self.config.rnn_type == "gru":
+            x, h_n = self.gru(x.last_hidden_state)
 
         x_mask = torch.stack([h[i.tolist().index(self.mask_token_id)] for h, i in zip(x, input_ids)])
         
