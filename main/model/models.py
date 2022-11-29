@@ -95,8 +95,8 @@ class TransformerModelUsingMask(nn.Module):
             layers.append(nn.ReLU())
             
         if self.rnn_type == "lstm":
-            self.lstm = nn.LSTM(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
-            layers.append(nn.Linear(self.h_dim*2, self.config.num_labels))
+            self.lstm = nn.LSTM(self.h_dim, self.h_dim, num_layers=1, bias=True, batch_first=True, dropout=0.1, bidirectional=False)
+            layers.append(nn.Linear(self.h_dim, self.config.num_labels))
         elif self.rnn_type == "gru":
             self.gru = nn.GRU(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
             layers.append(nn.Linear(self.h_dim*2, self.config.num_labels))
