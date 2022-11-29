@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 
 
 # Get weight from label distribution for 'weighted CrossEntropy'
-def get_weights_prob(label2num: dict, df: pd.DataFrame, weighted=False):
+def get_weights_prob(label2num: dict, df: pd.DataFrame, weighted=0):
     '''
     Computes weight distribution of data with Label num for CrossEntropy Loss.
     
@@ -16,7 +16,7 @@ def get_weights_prob(label2num: dict, df: pd.DataFrame, weighted=False):
         weighted : 'True' if you want to use weighted CrossEntropy. 
                     It'll return uniform distirbution if you set it to False.
     '''
-    if weighted:
+    if weighted == 1:
         weights = []
 
         no_relation_index = 0
