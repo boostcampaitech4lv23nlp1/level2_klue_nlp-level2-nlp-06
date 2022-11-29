@@ -115,10 +115,16 @@ class TransformerModelUsingMask(nn.Module):
         
         if self.rnn_type == "lstm":
             x, (h_n, c_n) = self.lstm(x)
+            x_mask1 = torch.stack([h[i.tolist().index(self.mask_token_id)] for h, i in zip(x[:,:self.h_dim,:], input_ids)])
+            x_mask2 = torch.stack([h[i.tolist().index(self.mask_token_id)] for h, i in zip(x[:,self.h_dim:,:], input_ids)])
+            x_mask = torch.cat([x_mask1, x_mask2], dim=1)
         elif self.rnn_type == "gru":
-            x, h_n = self.gru(x.last_hidden_state)
-
-        x_mask = torch.stack([h[i.tolist().index(self.mask_token_id)] for h, i in zip(x, input_ids)])
+            x, h_n = self.gru(x)
+            x_mask1 = torch.stack([h[i.tolist().index(self.mask_token_id)] for h, i in zip(x[:,:self.h_dim,:], input_ids)])
+            x_mask2 = torch.stack([h[i.tolist().index(self.mask_token_id)] for h, i in zip(x[:,self.h_dim:,:], input_ids)])
+            x_mask = torch.cat([x_mask1, x_mask2], dim=1)
+        else:
+            x_mask = torch.stack([h[i.tolist().index(self.mask_token_id)] for h, i in zip(x, input_ids)])
         
         ## Classification layer
         out = self.sequence(x_mask)
