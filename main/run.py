@@ -5,7 +5,7 @@ class Config:
     def __init__(self):
         ## 1. 모델 학습시킬 때 가장 먼저 바꿔야 하는 것
         self.model_name: str = "klue/roberta-large"
-        self.save_path: str = "../../saved_model/tt.pt" # 최종 모델을 어디에 저장할지
+        self.save_path: str = "../../saved_model/test.pt" # 최종 모델을 어디에 저장할지
         self.result_path: str = "../../dataset/submission.csv" # 마지막 csv 파일을 어디에 저장할지
         self.wandb_name: str = "'add gru test 2'" # wandb 내에서 작업 이름 설정 (중요)
         self.wandb_group: str = "'add rnn test'" # wandb group.
