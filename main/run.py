@@ -7,9 +7,10 @@ class Config:
         self.model_name: str = "klue/roberta-large"
         self.save_path: str = "../../saved_model/tt.pt" # 최종 모델을 어디에 저장할지
         self.result_path: str = "../../dataset/submission.csv" # 마지막 csv 파일을 어디에 저장할지
-        self.wandb_name: str = "'add lstm test1'" # wandb 내에서 작업 이름 설정 (중요)
+        self.wandb_name: str = "'add lstm test0'" # wandb 내에서 작업 이름 설정 (중요)
         self.wandb_group: str = "'add rnn test'" # wandb group.
-        self.wandb_note: str = "'lstm, num_layers=2, bias=True, dropout=0.1, bidirectional=True'" # wandb note
+        self.wandb_note: str = "'no lstm'" # wandb note
+        #'lstm, num_layers=2, bias=True, dropout=0.1, bidirectional=True'
         
         ## 2. 데이터 위치 (csv 파일)
         self.train_data_path: str = "../../dataset/train/train8/total_train.csv"
@@ -27,10 +28,10 @@ class Config:
         self.model_type: int = 1
         self.input_type: int = 1
         self.pooling = "MEAN" # 어떤 pooler output을 사용할 것인지 : ["MEAN", "CLS"]
-        self.rnn_type: str = 'lstm' #['lstm', 'gru', None(사용 안함)] - rnn_type 사용 시 pooling은 적용되지 않음. 참고.
+        self.rnn_type: str = None #['lstm', 'gru', None(사용 안함)] - rnn_type 사용 시 pooling은 적용되지 않음. 참고.
         self.epoch: int = 3
-        self.checkpoint_dir: str = "./results/rescent/roberta-large/total" # Trainer의 학습 checkpoint 저장 경로.
-        self.label_dict_dir: str = "./results/rescent/roberta-large/total/label2num.pickle" # RESCENT : label2num dictionary save path.
+        self.checkpoint_dir: str = "./results/klue/roberta-large/add_rnn_test/test0" # Trainer의 학습 checkpoint 저장 경로.
+        self.label_dict_dir: str = "./results/klue/roberta-large/add_rnn_test/test0/label2num.pickle" # RESCENT : label2num dictionary save path.
         self.warmup_step: int = 500 # learning rate warmup step.
         self.eval_step: int = 500 # 모델 평가/저장 step 수.
 

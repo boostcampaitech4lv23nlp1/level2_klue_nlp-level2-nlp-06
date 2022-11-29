@@ -35,6 +35,7 @@ class TransformerModel(nn.Module):
             layers.append(nn.Linear(self.h_dim*2, self.config.num_labels))
         else:
             layers.append(nn.Linear(self.h_dim, self.config.num_labels))
+            
         self.sequence = nn.Sequential(*layers)
         
         # BERT가 아닌 Electra, GPT 등의 모델인 경우, Pooling 레이어를 추가.
@@ -95,8 +96,10 @@ class TransformerModelUsingMask(nn.Module):
             
         if self.rnn_type == "lstm":
             self.lstm = nn.LSTM(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
+            layers.append(nn.Linear(self.h_dim*2, self.config.num_labels))
         elif self.rnn_type == "gru":
             self.gru = nn.GRU(self.h_dim, self.h_dim, num_layers=2, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
+            layers.append(nn.Linear(self.h_dim*2, self.config.num_labels))
         else:
             layers.append(nn.Linear(self.h_dim, self.config.num_labels))
         self.sequence = nn.Sequential(*layers)
