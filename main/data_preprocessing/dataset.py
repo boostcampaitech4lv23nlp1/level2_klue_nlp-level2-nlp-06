@@ -51,6 +51,47 @@ class DataSet(Dataset):
         out["attention_mask"] = out["attention_mask"][0]
         out["labels"] = torch.tensor(self.labels[idx])
         
+        if self.config.model_type == 3: # R-BERT
+            out["sub_entity_mask"] = [0] * len(out["input_ids"])
+            out["obj_entity_mask"] = [0] * len(out["input_ids"])
+            
+            s_s = self.data["new_sub_start"][idx]
+            tok_s_s = out.char_to_token(self.data["new_sub_start"][idx])
+            while tok_s_s is None:
+                s_s += 1
+                tok_s_s = out.char_to_token(s_s)
+            
+            s_e = self.data["new_sub_end"][idx]
+            tok_s_e = out.char_to_token(self.data["new_sub_end"][idx])
+            while tok_s_e is None:
+                s_e -= 1
+                tok_s_e = out.char_to_token(s_e)
+            
+            o_s = self.data["new_obj_start"][idx]
+            tok_o_s = out.char_to_token(self.data["new_obj_start"][idx])
+            while tok_o_s is None:
+                o_s += 1
+                tok_o_s = out.char_to_token(o_s)
+            
+            o_e = self.data["new_obj_end"][idx]
+            tok_o_e = out.char_to_token(self.data["new_obj_end"][idx])
+            while tok_o_e is None:
+                o_e -= 1
+                tok_o_e = out.char_to_token(o_e)
+
+            for i in range(tok_s_s, tok_s_e + 1):
+                if i is None:
+                    continue
+                out["sub_entity_mask"][i] = 1
+            
+            for i in range(tok_o_s, tok_o_e + 1):
+                if i is None:
+                    continue
+                out["obj_entity_mask"][i] = 1
+            
+            out['sub_entity_mask'] = torch.tensor(out['sub_entity_mask'])
+            out['obj_entity_mask'] = torch.tensor(out['obj_entity_mask'])
+
         return out
         
     def __len__(self) -> int:
@@ -105,6 +146,47 @@ class DataSetTest(Dataset):
         out["input_ids"] = out["input_ids"]
         out["token_type_ids"] = out["token_type_ids"]
         out["attention_mask"] = out["attention_mask"]
+
+        if self.config.model_type == 3: # R-BERT
+            out["sub_entity_mask"] = [0] * len(out["input_ids"][0])
+            out["obj_entity_mask"] = [0] * len(out["input_ids"][0])
+            
+            s_s = self.data["new_sub_start"][idx]
+            tok_s_s = out.char_to_token(self.data["new_sub_start"][idx])
+            while tok_s_s is None:
+                s_s += 1
+                tok_s_s = out.char_to_token(s_s)
+            
+            s_e = self.data["new_sub_end"][idx]
+            tok_s_e = out.char_to_token(self.data["new_sub_end"][idx])
+            while tok_s_e is None:
+                s_e -= 1
+                tok_s_e = out.char_to_token(s_e)
+            
+            o_s = self.data["new_obj_start"][idx]
+            tok_o_s = out.char_to_token(self.data["new_obj_start"][idx])
+            while tok_o_s is None:
+                o_s += 1
+                tok_o_s = out.char_to_token(o_s)
+            
+            o_e = self.data["new_obj_end"][idx]
+            tok_o_e = out.char_to_token(self.data["new_obj_end"][idx])
+            while tok_o_e is None:
+                o_e -= 1
+                tok_o_e = out.char_to_token(o_e)
+
+            for i in range(tok_s_s, tok_s_e + 1):
+                if i is None:
+                    continue
+                out["sub_entity_mask"][i] = 1
+            
+            for i in range(tok_o_s, tok_o_e + 1):
+                if i is None:
+                    continue
+                out["obj_entity_mask"][i] = 1
+            
+            out['sub_entity_mask'] = torch.tensor(out['sub_entity_mask']).unsqueeze(0)
+            out['obj_entity_mask'] = torch.tensor(out['obj_entity_mask']).unsqueeze(0)
         
         return out
         
