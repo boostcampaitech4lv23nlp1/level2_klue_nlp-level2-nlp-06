@@ -29,7 +29,7 @@ class Config:
         self.input_type: int = 1
         self.loss_type: int = 2
         self.pooling = "MEAN" # 어떤 pooler output을 사용할 것인지 : ["MEAN", "CLS"]
-        self.rnn_type: str = None #['lstm', 'gru', None(사용 안함)] - rnn_type 사용 시 pooling은 적용되지 않음. 참고.
+        self.add_rnn: bool = True # lstm layer를 BERT head에 추가할 것인가?
         self.epoch: int = 3
         self.checkpoint_dir: str = "./results/klue/roberta-large/add_rnn_test/test6" # Trainer의 학습 checkpoint 저장 경로.
         self.label_dict_dir: str = None # RESCENT : label2num dictionary save path.
