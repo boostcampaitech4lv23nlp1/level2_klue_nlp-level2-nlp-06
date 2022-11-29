@@ -8,6 +8,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 import sklearn
 import wandb
+from tqdm import tqdm
 from pandas import DataFrame
 from torch import Tensor
 from typing import List
@@ -17,7 +18,7 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 from transformers import AutoConfig, Trainer, TrainingArguments
 from .criterion import FocalLoss
-
+from inference.test import Test
 
 ## TODO: 이 모듈을 사용해 loss function을 변경해볼 수 있다.
 class CustomTrainer(Trainer):
@@ -56,8 +57,8 @@ class CustomTrainer(Trainer):
         
         loss = loss_fn(pred, labels)
            
-            ## huggingface의 trainer 내부를 보면 outputs[1:] 이 부분이 있다.
-            ## 우선 huggingface trainer의 구조를 파악한 이후 근본적인 문제를 해결할 생각이다.
+        ## huggingface의 trainer 내부를 보면 outputs[1:] 이 부분이 있다.
+        ## 우선 huggingface trainer의 구조를 파악한 이후 근본적인 문제를 해결할 생각이다.
         dummy = [0] * pred.shape[1]
         dummy = torch.Tensor([dummy]).cuda()
         pred = torch.cat([dummy, pred])
@@ -92,6 +93,9 @@ class MyTrainer():
         ## Setting
         self.config = config
         self.weights = weights
+        
+        ## Device
+        self.device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
         
         ## Model & Tokenizer
         self.model = model
@@ -138,9 +142,73 @@ class MyTrainer():
         
         trainer.train()
         self.save()
-
-    def save(self): torch.save(self.model.state_dict(), self.config.save_path)
+    
+    def save(self): 
+        torch.save(self.model.state_dict(), self.config.save_path)
+    
+    def curriculum(self, k):
+        self.model.to(self.device)
+        self.model.eval()
         
+        self.dataloader = DataLoader(self.val_dataset, batch_size=16, shuffle=False)
+        
+        store = []
+        for data in tqdm(self.dataloader):
+            data = {k: v.squeeze().to(self.device) for k, v in data.items()}
+            
+            with torch.no_grad():
+                pred = self.model(**data)
+                prob = F.softmax(pred, dim=-1).detach().cpu()
+                
+            store.append(prob)
+        store = torch.cat(store, dim=0)
+        label_list = torch.argmax(store, dim=-1)
+        
+        return label_list
+    
+    def curriculum_maker(self, label_lists, fold_data, train_data):
+        
+        ## Check the answer
+        data["0"] = -1
+        data["1"] = -1
+        data["2"] = -1
+        data["3"] = -1
+        data["4"] = -1
+        data["final"] = 0
+        for k in range(5):
+            now = str(k)
+            unused_data, used_data = fold_data[k]
+            ids = list(unused_data["id"])
+            for i in range(len(label_lists)):
+                data[now].iloc[ids] = label_lists[k]
+        
+        ## Get Final score
+        for i in range(len(data)):
+            total = 0
+            now = train_data["encoded_label"]
+            
+            if data["0"].iloc[i] != -1 and data["0"].iloc[i] == now:
+                total+=1
+            if data["1"].iloc[i] != -1 and data["1"].iloc[i] == now:
+                total+=1
+            if data["2"].iloc[i] != -1 and data["2"].iloc[i] == now:
+                total+=1
+            if data["3"].iloc[i] != -1 and data["3"].iloc[i] == now:
+                total+=1
+            if data["4"].iloc[i] != -1 and data["4"].iloc[i] == now:
+                total+=1
+
+            data["final"].iloc[i] = total
+
+        ## Sort the data
+        train_data = train_data.sort_values(by=["final"])
+        
+        ## Make initial data
+        train_data = train_data[["id", "sentence", "subject_entity", "object_entity", "label", "source"]]
+        
+        ## Save Data
+        train_data.to_csv("curriculum_data.csv", index=False)
+    
     def klue_re_micro_f1(self, preds, labels):
         """KLUE-RE micro f1 (except no_relation)"""
         label_list = list(self.train_dataset.label2num.keys()) # get label_list from train_dataset.
