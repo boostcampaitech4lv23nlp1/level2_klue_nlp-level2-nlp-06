@@ -16,14 +16,16 @@ from torch.utils.data import Dataset, DataLoader
 from transformers import AdamW, get_linear_schedule_with_warmup
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 from transformers import AutoConfig, Trainer, TrainingArguments
+from .criterion import FocalLoss
 
 
 ## TODO: 이 모듈을 사용해 loss function을 변경해볼 수 있다.
 class CustomTrainer(Trainer):
-    def __init__(self, weights, **args):
+    def __init__(self, weights, loss_type, **args):
         super(CustomTrainer, self).__init__(**args)
         # for weighted CrossEntropy
         self.weights = weights.to("cuda")
+        self.loss_type = loss_type
 
     """
     Huggingface의 trainer의 loss 부분 Overwrite 한 부분
@@ -43,16 +45,19 @@ class CustomTrainer(Trainer):
         Returns:
             _type_: _description_
         """
-        loss_fn = nn.CrossEntropyLoss(self.weights)
-        
+        if self.loss_type in [0,1]:
+            loss_fn = nn.CrossEntropyLoss(self.weights)
+        elif self.loss_type == 2:
+            loss_fn = FocalLoss(0.25,2)
+
         labels = inputs.get("labels")
         
         pred = model(**inputs)
         
         loss = loss_fn(pred, labels)
-        
-        ## huggingface의 trainer 내부를 보면 outputs[1:] 이 부분이 있다.
-        ## 우선 huggingface trainer의 구조를 파악한 이후 근본적인 문제를 해결할 생각이다.
+           
+            ## huggingface의 trainer 내부를 보면 outputs[1:] 이 부분이 있다.
+            ## 우선 huggingface trainer의 구조를 파악한 이후 근본적인 문제를 해결할 생각이다.
         dummy = [0] * pred.shape[1]
         dummy = torch.Tensor([dummy]).cuda()
         pred = torch.cat([dummy, pred])
@@ -128,6 +133,7 @@ class MyTrainer():
             eval_dataset=self.val_dataset,
             compute_metrics=self.compute_metrics,
             weights=self.weights,
+            loss_type=self.config.loss_type
         )
         
         trainer.train()

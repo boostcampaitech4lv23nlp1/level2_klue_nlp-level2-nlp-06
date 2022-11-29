@@ -50,7 +50,7 @@ class Preprocessing():
         ## Transformer 모델의 linear output 수를 조절하기 위해 변수 추가.
         self.classes = len(self.label2num)
         ## Get Class Distribution Weights for CrossEntropy loss.
-        self.weights = get_weights_prob(self.label2num, self.train_data, self.config.weighted_loss)
+        self.weights = get_weights_prob(self.label2num, self.train_data, self.config.loss_type)
         
         ## Seperate obj & subj
         self.preprocessing_dataset = preprocessing_dataset
@@ -69,12 +69,11 @@ class Preprocessing():
             self.entity_marker(self.val_data, config.input_type)
             self.entity_marker(self.test_data, config.input_type)
         ## MLM
-        elif self.config.input_type == 2:
+        if self.config.model_type == 1:
             self.concat_and_mask(self.train_data)
             self.concat_and_mask(self.val_data)
             self.concat_and_mask(self.test_data)
-        
-        
+
         ## Train & Validation Seperation
         ## TODO: Validation dataset Seperation or other method
         #self.seperate_train_val()
