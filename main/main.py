@@ -51,6 +51,7 @@ if __name__ == "__main__":
     parser.add_argument("--eval_step", type=int)
     parser.add_argument("--label_dict_dir", type=str)
     parser.add_argument("--pooling", type=str)
+    parser.add_argument("--add_rnn", type=str)
     parser.add_argument("--loss_type", type=int)
     
     ## Set seed
