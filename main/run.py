@@ -14,18 +14,18 @@ class Config:
         
         ## 2. 데이터 위치 (csv 파일)
         self.train_data_path: str = "../../dataset/train/train_80.csv"
-        self.val_data_path: str = "../../dataset/valid/valid_20.csv"
+        self.val_data_path: str = "../../dataset/train/valid_20.csv"
         self.test_data_path: str = "../../dataset/test/test_data.csv"
 
         ## 3. 학습 설정
         '''
         train_type = {0: "base-model", 1: "rescent"}
-        model_type = {0: "base-model", 1: "Masked_QA"}
-        input_type = {0: "base-input", 1: "typed_punct_entity", 2: "Masked_QA", 3:"typed_punct_entity_front", 4: "entity_mask", 5: "entity_marker", 6:"typed_entity_marker"} 
+        model_type = {0: "base-model", 1: "Masked_QA", 2: "MLM Pretraining", 3: "R-BERT"}
+        input_type = {0: "base-input", 1: "typed_punct_entity", 2: "Masked_QA", 3:"typed_punct_entity_front", 4: "entity_mask", 5: "entity_marker", 6:"typed_entity_marker"}
         loss_type = {0: CrossEntropy, 1: Weighted_CrossEntropy, 2: FocalLoss}
         '''
         self.train_type: int = 0
-        self.model_type: int = 1
+        self.model_type: int = 3
         self.input_type: int = 1
         self.loss_type: int = 2
         self.pooling = "MEAN" # 어떤 pooler output을 사용할 것인지 : ["MEAN", "CLS"]
@@ -35,6 +35,7 @@ class Config:
         self.label_dict_dir: str = None # RESCENT : label2num dictionary save path.
         self.warmup_step: int = 500 # learning rate warmup step.
         self.eval_step: int = 500 # 모델 평가/저장 step 수.
+        self.entity_from: str = "last" # ["last", "middle"]
 
         ## 4. 모델 하이퍼파라미터
         self.num_hidden_layer: int = 0 # BERT 뒤에 linear layer를 몇 개 쌓을지.

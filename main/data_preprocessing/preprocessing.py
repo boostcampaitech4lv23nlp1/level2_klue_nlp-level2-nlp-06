@@ -64,12 +64,16 @@ class Preprocessing():
             self.simple_concat(self.train_data)
             self.simple_concat(self.test_data)
             self.simple_concat(self.val_data)
-        if self.config.input_type in [1,3,4,5,6]:
+        elif self.config.model_type == 3:
+            self.create_new_entity_pos(self.train_data)
+            self.create_new_entity_pos(self.val_data)
+            self.create_new_entity_pos(self.test_data)
+        elif self.config.input_type in [1,3,4,5,6]:
             self.entity_marker(self.train_data, config.input_type)
             self.entity_marker(self.val_data, config.input_type)
             self.entity_marker(self.test_data, config.input_type)
         ## MLM
-        if self.config.model_type == 1:
+        elif self.config.model_type == 1:
             self.concat_and_mask(self.train_data)
             self.concat_and_mask(self.val_data)
             self.concat_and_mask(self.test_data)
@@ -182,7 +186,62 @@ class Preprocessing():
             )
         data["sentence"] = new_sentences
         
+
+    def create_new_entity_pos(self, data):
+        ## TODO: entity_marker에서 new position 자체를 생성해 넘겨줄 수 있도록 수정하기
+        dic = {"PER": "사람", "ORG": "조직", "LOC": "장소", "DAT": "일시", "POH": "명사", "NOH": "숫자"}
+
+        new_sub_start = []
+        new_sub_end = []
+        new_obj_start = []
+        new_obj_end = []
+        store = []
+        for i in range(len(data)):
+            s = data["sentence"][i]
+            sj = data["sub_word"][i]
+            s_s = int(data["sub_start"][i])
+            s_e = int(data["sub_end"][i])
+            s_t = data["sub_type"][i]
+            oj = data["obj_word"][i]
+            o_s = int(data["obj_start"][i])
+            o_e = int(data["obj_end"][i])
+            o_t = data["obj_type"][i]
             
+            subject_entity = "@ " + "+ " + dic[s_t] + " + " + sj + " @ "
+            object_entity = "# " + "^ " + dic[o_t] + " ^ " + oj + " # "
+            
+            if s_e > o_e:
+                s1 = s[:o_s]
+                s2 = s[o_e+1:s_s]
+                s3 = s[s_e+1:]
+                new_s = s1 + object_entity + s2 + subject_entity + s3
+                new_s_s = s_s + 7 + len(dic[s_t]) + 12
+                new_s_e = new_s_s + len(sj) - 1
+                new_o_s = o_s + 7 + len(dic[o_t])
+                new_o_e = new_o_s + len(oj) - 1
+            else:
+                s1 = s[:s_s]
+                s2 = s[s_e+1:o_s]
+                s3 = s[o_e+1:]
+                new_s = s1 + subject_entity + s2 + object_entity + s3
+                new_s_s = s_s + 7 + len(dic[s_t])
+                new_s_e = new_s_s + len(sj) - 1
+                new_o_s = o_s + 7 + len(dic[o_t]) + 12
+                new_o_e = new_o_s + len(oj) - 1
+            
+            new_sub_start.append(new_s_s)
+            new_sub_end.append(new_s_e)
+            new_obj_start.append(new_o_s)
+            new_obj_end.append(new_o_e)
+            store.append(new_s)
+        
+        data["sentence"] = store
+        data["new_sub_start"] = new_sub_start
+        data["new_sub_end"] = new_sub_end
+        data["new_obj_start"] = new_obj_start
+        data["new_obj_end"] = new_obj_end
+
+
     def make_data_set(self):
         """
         train loader와 validation loader를 생성하는 함수
