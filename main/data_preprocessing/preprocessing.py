@@ -2,6 +2,8 @@ import pandas as pd
 import pickle as pickle
 from argparse import Namespace
 from transformers import AutoTokenizer
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold
 
 from .utils import get_weights_prob, preprocessing_dataset, label_to_num
 from .dataset import DataSet, DataSetTest
@@ -38,6 +40,11 @@ class Preprocessing():
         self.test_dataset = None
         self.label2num = None
         
+        ## Kfold & Curriculum data
+        self.folded_data = []
+        self.folded_dataset = []
+        
+        
         ## Get Label & Label encoding to number
         '''
         mode : '모델'마다 분류해야 하는 개수가 다르기 때문에 만든 변수.
@@ -72,21 +79,22 @@ class Preprocessing():
             self.entity_marker(self.train_data, config.input_type)
             self.entity_marker(self.val_data, config.input_type)
             self.entity_marker(self.test_data, config.input_type)
+            
         ## MLM
         elif self.config.model_type == 1:
             self.concat_and_mask(self.train_data)
             self.concat_and_mask(self.val_data)
             self.concat_and_mask(self.test_data)
-
-        ## Train & Validation Seperation
-        ## TODO: Validation dataset Seperation or other method
-        #self.seperate_train_val()
+        
+        ## KFold & Curriculum
+        if self.config.train_type in [2, 3]:
+            self.set_fold()
         
         ## Make data loader
         self.make_data_set()
         
     def set_label2num(self):
-        modes = {0: "base", 1: "rescent"}
+        modes = {0: "base", 1: "rescent", 2: "base"}
         mode = modes[self.config.train_type]
         if mode == "base":
             with open("./source/dict_label_to_num.pkl", "rb") as f:
@@ -250,6 +258,18 @@ class Preprocessing():
         self.val_dataset = DataSet(self.val_data, self.tokenizer, self.config, self.label2num)
         self.test_dataset = DataSetTest(self.test_data, self.tokenizer, self.config, self.label2num)
     
+    def set_fold(self):
+        """
+        KFold를 위해 train data를 sub train data와 sub valiadation data로 변경하는 코드
+        """        
+        skf = StratifiedKFold(n_splits=5)
+        for train_index, val_index in skf.split(self.train_data, self.train_data["label"]):
+            train_data, val_data = self.train_data.iloc[train_index], self.train_data.iloc[val_index]
+            self.folded_data.append([train_data, val_data])
+            train_dataset = DataSet(train_data, self.tokenizer, self.config, self.label2num)
+            val_dataset = DataSet(val_data, self.tokenizer, self.config, self.label2num)
+            self.folded_dataset.append([train_dataset, val_dataset])
+        
     ## ALL Get Method
     def get_train_dataset(self): return self.train_dataset
     def get_val_dataset(self): return self.val_dataset
@@ -257,3 +277,5 @@ class Preprocessing():
     def get_train_data(self): return self.train_data
     def get_val_data(self): return self.val_data
     def get_test_data(self): return self.test_data
+    def get_fold_data(self): return self.folded_data
+    def get_fold_dataset(self): return self.folded_dataset
