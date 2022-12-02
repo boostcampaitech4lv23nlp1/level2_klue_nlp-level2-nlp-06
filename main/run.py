@@ -21,7 +21,7 @@ class Config:
     ## 3. 학습 설정
     '''
     train_type = {0: "base-model", 1: "rescent", 2: "curriculum", 3: "kfold"}
-    model_type = {0: "base-model", 1: "Masked_QA", 2: "MLM-pretraining", 3: "R-BERT"}
+    model_type = {0: "base-model", 1: "Masked_QA"}
     input_type = {0: "base-input", 1: "typed_punct_entity", 2: "Masked_QA", 3:"typed_punct_entity_front", 4: "entity_mask", 5: "entity_marker", 6:"typed_entity_marker"} 
     loss_type = {0: CrossEntropy, 1: Weighted_CrossEntropy, 2: FocalLoss}
     '''

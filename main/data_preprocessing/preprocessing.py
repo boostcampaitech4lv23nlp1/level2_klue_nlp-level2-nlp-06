@@ -78,26 +78,24 @@ class Preprocessing():
         self.make_data_set()
     
     
-    ## TODO: 김준휘
     def set_label2num(self):
         """
         label to num dictionary 정의
-        """        
-        modes = {0: "base", 1: "rescent", 2: "base", 3: "base"}
-        mode = modes[self.config.train_type]
-        if mode == "base":
-            with open("./source/dict_label_to_num.pkl", "rb") as f:
-                self.label2num = pickle.load(f)
-        elif mode == "rescent":
+        """
+        if self.config.train_type == 1: # Recent : 일부 라벨로만 학습할 때.
             labels = list(self.train_data["label"].unique()) + list(self.val_data["label"].unique())
             labels = sorted(list(set(labels)))
             self.label2num = {label: i for i, label in enumerate(labels)}
-            # save label dict to 
+            
             if self.config.label_dict_dir != None:
                 with open(self.config.label_dict_dir, "wb") as f:
                     pickle.dump(self.label2num, f)
+        else: # 30개 전체 라벨로 학습할 때,
+            with open("./source/dict_label_to_num.pkl", "rb") as f:
+                self.label2num = pickle.load(f)
         self.train_data = label_to_num(self.train_data, self.label2num)
         self.val_data = label_to_num(self.val_data, self.label2num)
+        
         
     def simple_concat(self, data):
         """
@@ -114,6 +112,7 @@ class Preprocessing():
         for i in range(len(data)):
             store.append(obj[i]+" [SEP] "+sub[i]+" [SEP] "+sentence[i])
         data["sentence"] = store
+        
     
     def entity_marker(self, data, input_type):
         """

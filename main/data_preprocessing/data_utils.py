@@ -17,19 +17,12 @@ def get_weights_prob(label2num: dict, df: pd.DataFrame, weighted=0):
     """    
     if weighted == 1:
         weights = []
-
-        no_relation_index = 0
+        
         for i, label in enumerate(label2num.keys()):
-            if label == "no_relation":
-                no_relation_index = i
-                continue
             cnt = len(df[df["label"]==label])
-            weights.append(cnt)
-            
-        # 제곱으로 라벨 비율에 따른 차이를 더 늘려보자.
-        weights = [(1 - (weight/sum(weights)))**2 for weight in weights]
-        # no_relation에 더 큰 패널티를 부여. (0.5)
-        weights = weights[:no_relation_index] + [0.5] + weights[no_relation_index:]
+            weights.append(cnt**2)
+
+        weights = [(1 - (weight/sum(weights))) for weight in weights]
     else:
         weights = [1 for _ in range(len(label2num.keys()))]
         
