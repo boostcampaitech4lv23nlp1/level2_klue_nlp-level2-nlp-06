@@ -1,21 +1,20 @@
-## TODO: Move some Preprocessing function to this file.
-
 import torch
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-
 # Get weight from label distribution for 'weighted CrossEntropy'
 def get_weights_prob(label2num: dict, df: pd.DataFrame, weighted=0):
-    '''
-    Computes weight distribution of data with Label num for CrossEntropy Loss.
-    
+    """
+    CrossEntropy loss의 label 별 loss weight 계산하는 함수
+
     Args:
-        label2num : Dictionary which maps label to integer.
-        df : 'Trainset' DataFrame
-        weighted : 'True' if you want to use weighted CrossEntropy. 
-                    It'll return uniform distirbution if you set it to False.
-    '''
+        label2num (dict): label to num dictionary
+        df (pd.DataFrame): dataset
+        weighted (int, optional): loss type
+
+    Returns:
+        torch.Tensor: label 별 loss weight
+    """    
     if weighted == 1:
         weights = []
         
@@ -93,32 +92,3 @@ def label_to_num(data, label2num):
     data["encoded_label"] = encoded_label
     
     return data
-    
-    
-def seperate_train_val(config, train_data, val_data):
-    """
-    train data와 validation data를 간단하게 분리하는 함수
-    """
-    if config.val_data_flag == 0:
-        train_data, val_data = train_test_split(train_data, test_size=0.06, random_state=6)
-    elif config.val_data_flag == 1:
-        train_store = []
-        val_store = []
-        for i in range(30):
-            now_data = train_data.loc[train_data["encoded_label"] == i]
-            percent = 20 / len(now_data)
-            train, val = train_test_split(now_data, test_size=percent, random_state=6)
-            
-            train_store.append(train)
-            val_store.append(val)
-        
-        train_data = train_store[0]
-        val_data = val_store[0]
-        for i in range(1, 30):
-            train_data = pd.concat([train_data, train_store[i]], axis = 0)
-            val_data = pd.concat([val_data, val_store[i]], axis = 0)
-
-        train_data = train_data.sample(n=len(train_data), replace=False)
-        val_data = val_data.sample(n=len(val_data), replace=False)
-        
-    return train_data, val_data

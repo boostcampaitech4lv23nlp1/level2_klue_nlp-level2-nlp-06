@@ -39,7 +39,7 @@ class Test():
         
         self.dataloader = DataLoader(self.test_dataset, batch_size=16, shuffle=False)
         
-    ## TODO: Test도 배치 단위로 해서 빠르게 수행하기.
+        
     def test(self):
         for data in tqdm(self.dataloader):
             data = {k: v.squeeze().to(self.device) for k, v in data.items()}
@@ -56,11 +56,11 @@ class Test():
         self.num_to_label()
         self.make_submission_file()
         
+        
     def num_to_label(self):
         """
         숫자로 encoding되어 있는 label을 실제 label로 decoding해주는 함수
         """        
-        
         dict_num_to_label = {k: v for v, k in self.test_dataset.label2num.items()}
         
         decoded_label = []
@@ -69,6 +69,7 @@ class Test():
         
         self.test_data["pred_label"] = decoded_label
         self.test_data["probs"] = self.test_prob_store.tolist()
+        
         
     def make_submission_file(self):
         """
