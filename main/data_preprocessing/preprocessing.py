@@ -2,11 +2,9 @@ import pandas as pd
 import pickle as pickle
 from argparse import Namespace
 from transformers import AutoTokenizer
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import StratifiedKFold
-
-from .utils import get_weights_prob, preprocessing_dataset, label_to_num
 from .dataset import DataSet, DataSetTest
+from sklearn.model_selection import StratifiedKFold
+from .utils import get_weights_prob, preprocessing_dataset, label_to_num
 
 
 class Preprocessing():
@@ -19,17 +17,16 @@ class Preprocessing():
 
         Args:
             config (Namespace): Setting Parameters
-            tokenizer (tokenizer): tokenzier
         """
         ## Setting
         self.config = config
         
         ## Tokenizer
-        if config.input_type in [4,5,6]:
+        if config.input_type in [4,5,6]: # special token 추가한 tokenizer
             self.tokenizer = AutoTokenizer.from_pretrained("./data_preprocessing/newtokenizer")
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
-        self.mask_id = self.tokenizer.mask_token_id
+        self.config.mask_id = self.tokenizer.mask_token_id # QA를 위한 mask id 저장
         
         ## Load dataset & DataLoader
         self.train_data = pd.read_csv(self.config.train_data_path)
@@ -44,29 +41,20 @@ class Preprocessing():
         self.folded_data = []
         self.folded_dataset = []
         
-        
         ## Get Label & Label encoding to number
-        '''
-        mode : '모델'마다 분류해야 하는 개수가 다르기 때문에 만든 변수.
-        'base' : 30개의 라벨로 분류.
-        'rescent' : 그룹에 맞는 라벨 수로 분류.
-        '''
-        
         self.set_label2num()
+        self.config.num_labels = len(self.label2num) # Transformer 모델의 linear output 수를 조절하기 위해 변수 추가.
         print("Label has been mapped to :", self.label2num)
-        ## Transformer 모델의 linear output 수를 조절하기 위해 변수 추가.
-        self.classes = len(self.label2num)
+        
         ## Get Class Distribution Weights for CrossEntropy loss.
         self.weights = get_weights_prob(self.label2num, self.train_data, self.config.loss_type)
         
         ## Seperate obj & subj
-        self.preprocessing_dataset = preprocessing_dataset
-        self.preprocessing_dataset(self.train_data)
-        self.preprocessing_dataset(self.test_data)
-        self.preprocessing_dataset(self.val_data)
+        preprocessing_dataset(self.train_data)
+        preprocessing_dataset(self.test_data)
+        preprocessing_dataset(self.val_data)
         
         ## 어떤 input으로 모델을 학습시킬지 결정하는 구간
-        ## TODO: input_type을 설정하여
         if self.config.input_type == 0:
             self.simple_concat(self.train_data)
             self.simple_concat(self.test_data)
@@ -81,7 +69,7 @@ class Preprocessing():
             self.entity_marker(self.test_data, config.input_type)
             
         ## MLM
-        elif self.config.model_type == 1:
+        if self.config.model_type == 1:
             self.concat_and_mask(self.train_data)
             self.concat_and_mask(self.val_data)
             self.concat_and_mask(self.test_data)
@@ -92,9 +80,14 @@ class Preprocessing():
         
         ## Make data loader
         self.make_data_set()
-        
+    
+    
+    ## TODO: 김준휘
     def set_label2num(self):
-        modes = {0: "base", 1: "rescent", 2: "base"}
+        """
+        label to num dictionary 정의
+        """        
+        modes = {0: "base", 1: "rescent", 2: "base", 3: "base"}
         mode = modes[self.config.train_type]
         if mode == "base":
             with open("./source/dict_label_to_num.pkl", "rb") as f:
@@ -109,7 +102,7 @@ class Preprocessing():
                     pickle.dump(self.label2num, f)
         self.train_data = label_to_num(self.train_data, self.label2num)
         self.val_data = label_to_num(self.val_data, self.label2num)
-    
+        
     def simple_concat(self, data):
         """
         가장 간단하게 object + [SEP] + subject + [SEP] + sentence 를 조합한 방식
@@ -121,18 +114,20 @@ class Preprocessing():
         obj = list(data["obj_word"])
         sub = list(data["sub_word"])
         sentence = list(data["sentence"])
+        
         for i in range(len(data)):
             store.append(obj[i]+" [SEP] "+sub[i]+" [SEP] "+sentence[i])
         data["sentence"] = store
     
     def entity_marker(self, data, input_type):
-        '''
-        input type = 1  typed_entity_marker_punct_kr        :   @ + 사람 + 박수현 @ 은 오늘 # ^ 장소 ^ 시청 # 에 들렀다
-        input type = 3  typed_entity_marker_punct_kr_front  :   @ + PER + 박수현 @[SEP]# ^ LOC ^ 시청 #[SEP] @ + PER + 박수현 @ 은 오늘 # ^ LOC ^ 시청 # 에 들렀다
-        input type = 4  entity_mask                         :   [SUBJ-PER] 은 오늘 [OBJ-LOC] 에 들렀다
-        input type = 5  entity_marker                       :   [E1] 박수현 [/E1]은 오늘 [E2] 시청 [/E2] 에 들렀다
-        input type = 6  typed_entity_marker                 :   [S:PER] 박수현 [/S:PER] 은 오늘 [O:LOC] 시청 [/O:LOC] 에 들렀다. 
-        '''
+        """
+        input type에 따른 sentence 변경
+
+        Args:
+            data (DataFrame): 변경할 dataset
+            input_type (int): 'sentence' 유형
+        """        
+        
         dic = {"PER": "사람", "ORG": "조직", "LOC": "장소", "DAT": "일시", "POH": "명사", "NOH": "숫자"}
     
         store = []
@@ -186,7 +181,10 @@ class Preprocessing():
     def concat_and_mask(self, data):
         """
         MLM을 위해 관계 부분을 masking한 문장 만드는 함수
-        """
+
+        Args:
+            data (DataFrame): train_data, val_data, test_data 중 하나
+        """        
         new_sentences = []
         for i in range(len(data)):
             new_sentences.append(
@@ -196,7 +194,14 @@ class Preprocessing():
         
 
     def create_new_entity_pos(self, data):
+        """
+        R-Bert input type
+
+        Args:
+            data (DataFrame): train_data, val_data, test_data 중 하나
+        """        
         ## TODO: entity_marker에서 new position 자체를 생성해 넘겨줄 수 있도록 수정하기
+        ## TODO: 설유민
         dic = {"PER": "사람", "ORG": "조직", "LOC": "장소", "DAT": "일시", "POH": "명사", "NOH": "숫자"}
 
         new_sub_start = []
@@ -204,6 +209,7 @@ class Preprocessing():
         new_obj_start = []
         new_obj_end = []
         store = []
+        
         for i in range(len(data)):
             s = data["sentence"][i]
             sj = data["sub_word"][i]
@@ -258,17 +264,22 @@ class Preprocessing():
         self.val_dataset = DataSet(self.val_data, self.tokenizer, self.config, self.label2num)
         self.test_dataset = DataSetTest(self.test_data, self.tokenizer, self.config, self.label2num)
     
+    
     def set_fold(self):
         """
         KFold를 위해 train data를 sub train data와 sub valiadation data로 변경하는 코드
         """        
         skf = StratifiedKFold(n_splits=5)
         for train_index, val_index in skf.split(self.train_data, self.train_data["label"]):
+            # train_data, val_data 저장
             train_data, val_data = self.train_data.iloc[train_index], self.train_data.iloc[val_index]
             self.folded_data.append([train_data, val_data])
+            
+            # trian_dataset, val_dataset 저장
             train_dataset = DataSet(train_data, self.tokenizer, self.config, self.label2num)
             val_dataset = DataSet(val_data, self.tokenizer, self.config, self.label2num)
             self.folded_dataset.append([train_dataset, val_dataset])
+        
         
     ## ALL Get Method
     def get_train_dataset(self): return self.train_dataset
