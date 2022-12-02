@@ -13,6 +13,7 @@ class Config:
         #'lstm, num_layers=2, bias=True, dropout=0.1, bidirectional=True'
         
         ## 2. 데이터 위치 (csv 파일)
+
         self.train_data_path: str = "~/dataset/train/train_relabel.csv"
         self.val_data_path: str = "~/dataset/train/valid_20.csv"
         self.test_data_path: str = "~/dataset/test/test_data.csv"
@@ -27,6 +28,7 @@ class Config:
         self.train_type: int = 2
         self.model_type: int = 1
         self.input_type: int = 7
+
         self.loss_type: int = 2
         self.pooling = "CLS" # 어떤 pooler output을 사용할 것인지 : ["MEAN", "CLS"]
         self.add_rnn: bool = True # lstm layer를 BERT head에 추가할 것인가?
@@ -35,6 +37,7 @@ class Config:
         self.label_dict_dir: str = None # RESCENT : label2num dictionary save path.
         self.warmup_step: int = 500 # learning rate warmup step.
         self.eval_step: int = 500 # 모델 평가/저장 step 수.
+        self.entity_from: str = "last" # ["last", "middle"]
 
         ## 4. 모델 하이퍼파라미터
         self.num_hidden_layer: int = 0 # BERT 뒤에 linear layer를 몇 개 쌓을지.

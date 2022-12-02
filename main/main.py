@@ -53,6 +53,7 @@ if __name__ == "__main__":
     parser.add_argument("--pooling", type=str)
     parser.add_argument("--add_rnn", type=str)
     parser.add_argument("--loss_type", type=int)
+    parser.add_argument("--entity_from", type=str)
     
     ## Set seed
     set_seeds(6)
