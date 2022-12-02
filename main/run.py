@@ -21,7 +21,7 @@ class Config:
     ## 3. 학습 설정
     '''
     train_type = {0: "base-model", 1: "rescent", 2: "curriculum", 3: "kfold"}
-    model_type = {0: "base-model", 1: "Masked_QA"}
+    model_type = {0: "base-model", 1: "Masked_QA", 2: "MLM-pretraining", 3: "R-BERT"}
     input_type = {0: "base-input", 1: "typed_punct_entity", 2: "Masked_QA", 3:"typed_punct_entity_front", 4: "entity_mask", 5: "entity_marker", 6:"typed_entity_marker"} 
     loss_type = {0: CrossEntropy, 1: Weighted_CrossEntropy, 2: FocalLoss}
     '''
@@ -46,7 +46,7 @@ class Config:
     lr: float = 3e-5
 
     ## 5. 한번 바꾸면 바꿀일 없는 설정
-    wandb_project: str = "koohack"
+    wandb_project: str = "KLUE_RE"
     wandb_entity: str = "happy06"
     '''
     input type 에 대한 자세한 설명
