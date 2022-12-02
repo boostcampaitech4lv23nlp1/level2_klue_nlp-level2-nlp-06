@@ -66,7 +66,6 @@ if __name__ == "__main__":
             
             trainer = MyTrainer(
                 model=model,
-                tokenizer=preprocessing.tokenizer,
                 train_dataset=val_dataset, 
                 val_dataset=train_dataset,
                 val_data=val_data,
@@ -92,7 +91,6 @@ if __name__ == "__main__":
             
             trainer = MyTrainer(
                 model=model, 
-                tokenizer=preprocessing.tokenizer, 
                 train_dataset=train_dataset, 
                 val_dataset=val_dataset, 
                 val_data=val_data, 
@@ -114,7 +112,6 @@ if __name__ == "__main__":
         ## Training
         trainer = MyTrainer(
             model=model, 
-            tokenizer=preprocessing.tokenizer, 
             train_dataset=train_dataset, 
             val_dataset=val_dataset, 
             val_data=val_data, 
