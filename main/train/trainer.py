@@ -157,7 +157,7 @@ class MyTrainer():
         return label_list
     
     
-    def curriculum_maker(self, label_lists, fold_data, train_data):
+    def curriculum_maker(self, label_lists, fold_data, data):
         
         ## Check the answer
         data["0"] = -1
