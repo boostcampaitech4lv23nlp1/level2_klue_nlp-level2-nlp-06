@@ -32,7 +32,7 @@ class CustomTrainer(Trainer):
 
     Args:
         Trainer (Trainer): Huggingface에서 제공해주는 학습 모듈
-    """    
+    """
     def compute_loss(self, model, inputs, return_outputs=False):
         """
         Huggingface의 trainer의 loss 부분을 CrossEntropyLoss로 변경한 부분
@@ -55,9 +55,9 @@ class CustomTrainer(Trainer):
         pred = model(**inputs)
         
         loss = loss_fn(pred, labels)
-           
-            ## huggingface의 trainer 내부를 보면 outputs[1:] 이 부분이 있다.
-            ## 우선 huggingface trainer의 구조를 파악한 이후 근본적인 문제를 해결할 생각이다.
+
+        ## huggingface의 trainer 내부를 보면 outputs[1:] 이 부분이 있다.
+        ## 우선 huggingface trainer의 구조를 파악한 이후 근본적인 문제를 해결할 생각이다.
         dummy = [0] * pred.shape[1]
         dummy = torch.Tensor([dummy]).cuda()
         pred = torch.cat([dummy, pred])

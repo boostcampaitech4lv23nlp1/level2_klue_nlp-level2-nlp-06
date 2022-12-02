@@ -4,12 +4,12 @@ import subprocess
 class Config:
     def __init__(self):
         ## 1. 모델 학습시킬 때 가장 먼저 바꿔야 하는 것
-        self.model_name: str = "klue/roberta-large"
+        self.model_name: str = "jhgan/ko-sbert-multitask"
         self.save_path: str = "../../saved_model/test.pt" # 최종 모델을 어디에 저장할지
         self.result_path: str = "../../dataset/submission.csv" # 마지막 csv 파일을 어디에 저장할지
-        self.wandb_name: str = "'비교 위해 other model 재실험2'" # wandb 내에서 작업 이름 설정 (중요)
-        self.wandb_group: str = "is_related?" # wandb group.
-        self.wandb_note: str = "'29 label + valid_20.csv warmup_step=500'" # wandb note
+        self.wandb_name: str = "'SBERT'" # wandb 내에서 작업 이름 설정 (중요)
+        self.wandb_group: str = "'SBERT'" # wandb group.
+        self.wandb_note: str = "'jhgan/ko-sbert-multitask'" # wandb note
         
         ## 2. 데이터 위치 (csv 파일)
         self.train_data_path: str = "../../dataset/train/train2/train_80.csv"
@@ -29,10 +29,11 @@ class Config:
         self.loss_type: int = 0
         self.pooling = "MEAN" # 어떤 pooler output을 사용할 것인지 : ["MEAN", "CLS"]
         self.epoch: int = 5
-        self.checkpoint_dir: str = "./results/rescent/roberta-large/others2" # Trainer의 학습 checkpoint 저장 경로.
-        self.label_dict_dir: str = "./results/rescent/roberta-large/others2/label2num.pickle" # RESCENT : label2num dictionary save path.
-        self.warmup_step: int = 500 # learning rate warmup step.
+        self.checkpoint_dir: str = "./results/SBERT" # Trainer의 학습 checkpoint 저장 경로.
+        self.label_dict_dir: str = None # RESCENT : label2num dictionary save path.
+        self.warmup_step: int = 2000 # learning rate warmup step.
         self.eval_step: int = 500 # 모델 평가/저장 step 수.
+        self.add_rnn = '$False'
 
         ## 4. 모델 하이퍼파라미터
         self.num_hidden_layer: int = 0 # BERT 뒤에 linear layer를 몇 개 쌓을지.
