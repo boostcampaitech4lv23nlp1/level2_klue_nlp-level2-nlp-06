@@ -13,6 +13,7 @@ class TransformerModel(nn.Module):
         ## Setting
         self.config = config
         self.pooling = self.config.pooling
+        self.add_rnn = self.config.add_rnn
         
         ## Transformer model
         self.transformer = transformer
@@ -22,10 +23,16 @@ class TransformerModel(nn.Module):
         
         ## Layers
         layers = []
-        for i in range(self.config.num_hidden_layer): 
+        for i in range(self.config.num_hidden_layer):
             layers.append(nn.Linear(self.h_dim, self.h_dim))
             layers.append(nn.ReLU())
-        layers.append(nn.Linear(self.h_dim, self.config.num_labels))
+            
+        if self.add_rnn:
+            self.lstm = nn.LSTM(self.h_dim, self.h_dim, num_layers=1, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
+            layers.append(nn.Linear(self.h_dim*2, self.config.num_labels))
+        else:
+            layers.append(nn.Linear(self.h_dim, self.config.num_labels))
+            
         self.sequence = nn.Sequential(*layers)
         
         # BERT가 아닌 Electra, GPT 등의 모델인 경우, Pooling 레이어를 추가.
@@ -42,18 +49,19 @@ class TransformerModel(nn.Module):
             return_dict = True,
         )
         
-        if self.pooling == "CLS":
-            # 'pooler_output'이 있는 bert 모델은, 
-            if 'pooler_output' in x.keys():
-                x = x.pooler_output
-            # 'pooler_output'이 없는 bert 이외의 모델은, (Electra)
-            else:
-                # Get CLS token output from last hidden_state
-                x = x.last_hidden_state[:, 0, :]
-                x = self.pooler_linear(x)
-                x = self.dropout(x)
-        elif self.pooling == "MEAN":
-            x = mean_pooling(x, attention_mask)
+        if self.add_rnn:
+            x, (h_n, c_n) = self.lstm(x.last_hidden_state)
+            x = x[:, -1, :]
+        else:
+            if self.pooling == "CLS":
+                if 'pooler_output' in x.keys():
+                    x = x.pooler_output
+                else:
+                    x = x.last_hidden_state[:, 0, :]
+                    x = self.pooler_linear(x)
+                    x = self.dropout(x)
+            elif self.pooling == "MEAN":
+                x = mean_pooling(x, attention_mask)
         
         ## Classification layer
         out = self.sequence(x)
@@ -66,6 +74,7 @@ class TransformerModelUsingMask(nn.Module):
         ## Setting
         self.config = config
         self.mask_token_id = mask_token_id
+        self.add_rnn = self.config.add_rnn
         
         ## Transformer model
         self.transformer = transformer
@@ -78,7 +87,12 @@ class TransformerModelUsingMask(nn.Module):
         for i in range(self.config.num_hidden_layer): 
             layers.append(nn.Linear(self.h_dim, self.h_dim))
             layers.append(nn.ReLU())
-        layers.append(nn.Linear(self.h_dim, self.config.num_labels))
+            
+        if self.add_rnn:
+            self.lstm = nn.LSTM(self.h_dim, self.h_dim, num_layers=1, bias=True, batch_first=True, dropout=0.1, bidirectional=True)
+            layers.append(nn.Linear(self.h_dim*2, self.config.num_labels))
+        else:
+            layers.append(nn.Linear(self.h_dim, self.config.num_labels))
         self.sequence = nn.Sequential(*layers)
         
     def forward(self, *input, input_ids, token_type_ids, attention_mask, labels=None):
@@ -89,8 +103,14 @@ class TransformerModelUsingMask(nn.Module):
             attention_mask = attention_mask, #kwargs["attention_mask"],
             return_dict = True,
         ).last_hidden_state
-
-        x_mask = torch.stack([h[i.tolist().index(self.mask_token_id)] for h, i in zip(x, input_ids)])
+        
+        if self.add_rnn:
+            x, (h_n, c_n) = self.lstm(x)
+            x_mask1 = torch.stack([h[i.tolist().index(self.mask_token_id)] for h, i in zip(x[:,:,:self.h_dim], input_ids)])
+            x_mask2 = torch.stack([h[i.tolist().index(self.mask_token_id)] for h, i in zip(x[:,:,self.h_dim:], input_ids)])
+            x_mask = torch.cat([x_mask1, x_mask2], dim=1)
+        else:
+            x_mask = torch.stack([h[i.tolist().index(self.mask_token_id)] for h, i in zip(x, input_ids)])
         
         ## Classification layer
         out = self.sequence(x_mask)
