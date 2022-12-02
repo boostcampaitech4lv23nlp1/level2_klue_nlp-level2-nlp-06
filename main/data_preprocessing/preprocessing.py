@@ -4,7 +4,7 @@ from argparse import Namespace
 from transformers import AutoTokenizer
 from .dataset import DataSet, DataSetTest
 from sklearn.model_selection import StratifiedKFold
-from .utils import get_weights_prob, preprocessing_dataset, label_to_num
+from .data_utils import get_weights_prob, preprocessing_dataset, label_to_num
 
 
 class Preprocessing():

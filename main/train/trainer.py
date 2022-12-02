@@ -1,39 +1,41 @@
 import sys
+import wandb
+import torch
+import sklearn
 import datetime
+import warnings
 import numpy as np
 import pandas as pd
-import torch
-import warnings
-import torch.nn.functional as F
 import torch.nn as nn
-import sklearn
-import wandb
+import torch.nn.functional as F
+
 from tqdm import tqdm
-from pandas import DataFrame
-from torch import Tensor
 from typing import List
+from torch import Tensor
+from pandas import DataFrame
 from argparse import Namespace
-from torch.utils.data import Dataset, DataLoader
-from transformers import AdamW, get_linear_schedule_with_warmup
-from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
-from transformers import AutoConfig, Trainer, TrainingArguments
 from .criterion import FocalLoss
 from inference.test import Test
+from torch.utils.data import Dataset, DataLoader
+from transformers import AutoConfig, Trainer, TrainingArguments
+from transformers import AdamW, get_linear_schedule_with_warmup
+from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 
-## TODO: 이 모듈을 사용해 loss function을 변경해볼 수 있다.
+
 class CustomTrainer(Trainer):
-    def __init__(self, weights, loss_type, **args):
-        super(CustomTrainer, self).__init__(**args)
-        # for weighted CrossEntropy
-        self.weights = weights.to("cuda")
-        self.loss_type = loss_type
-
     """
     Huggingface의 trainer의 loss 부분 Overwrite 한 부분
 
     Args:
         Trainer (Trainer): Huggingface에서 제공해주는 학습 모듈
     """    
+    def __init__(self, weights, loss_type, **args):
+        super(CustomTrainer, self).__init__(**args)
+        # for weighted CrossEntropy
+        self.weights = weights.to("cuda")
+        self.loss_type = loss_type
+
+
     def compute_loss(self, model, inputs, return_outputs=False):
         """
         Huggingface의 trainer의 loss 부분을 CrossEntropyLoss로 변경한 부분
@@ -44,12 +46,12 @@ class CustomTrainer(Trainer):
             return_outputs (bool, optional): return output이 필요한 경우 pred를 return해주고 그렇지 않으면 loss만 return 해준다
 
         Returns:
-            _type_: _description_
+            (loss, pred) or loss: loss 값 혹은 prediction 값
         """
         if self.loss_type in [0,1]:
             loss_fn = nn.CrossEntropyLoss(self.weights)
         elif self.loss_type == 2:
-            loss_fn = FocalLoss(0.25,2)
+            loss_fn = FocalLoss()
 
         labels = inputs.get("labels")
         
@@ -59,6 +61,7 @@ class CustomTrainer(Trainer):
            
         ## huggingface의 trainer 내부를 보면 outputs[1:] 이 부분이 있다.
         ## 우선 huggingface trainer의 구조를 파악한 이후 근본적인 문제를 해결할 생각이다.
+        ## TODO: 박승현
         dummy = [0] * pred.shape[1]
         dummy = torch.Tensor([dummy]).cuda()
         pred = torch.cat([dummy, pred])
@@ -73,7 +76,6 @@ class MyTrainer():
     def __init__(
             self, 
             model, 
-            tokenizer,
             train_dataset: Dataset,
             val_dataset: Dataset,
             val_data: DataFrame,
@@ -85,7 +87,6 @@ class MyTrainer():
 
         Args:
             model (nn.Module): train에 사용할 모델
-            tokenizer (tokenizer): tokenizer
             train_loader (Dataset): train dataset
             val_loader (Dataset): validation dataset
             config (NameSpace): Setting
@@ -97,9 +98,8 @@ class MyTrainer():
         ## Device
         self.device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
         
-        ## Model & Tokenizer
+        ## Model
         self.model = model
-        self.tokenizer = tokenizer
         
         ## Train & Validation Dataset
         self.train_dataset = train_dataset
@@ -107,7 +107,6 @@ class MyTrainer():
         self.val_data = val_data
         
         ## 학습에 필요한 parameter 설정
-        ## TODO: 여기에서 여러 가지의 하이퍼파라미터 설정해볼 수 있음
         self.training_args = TrainingArguments(
             output_dir=config.checkpoint_dir,
             save_total_limit=2,
@@ -126,6 +125,7 @@ class MyTrainer():
             fp16=True,
         )
         
+        
     def train(self):
         """
         Huggingface 라이브러리를 사용해 학습
@@ -143,8 +143,10 @@ class MyTrainer():
         trainer.train()
         self.save()
     
+    
     def save(self): 
         torch.save(self.model.state_dict(), self.config.save_path)
+    
     
     def curriculum(self, k):
         self.model.to(self.device)
@@ -165,6 +167,7 @@ class MyTrainer():
         label_list = torch.argmax(store, dim=-1)
         
         return label_list
+    
     
     def curriculum_maker(self, label_lists, fold_data, train_data):
         
@@ -209,6 +212,7 @@ class MyTrainer():
         ## Save Data
         train_data.to_csv("curriculum_data.csv", index=False)
     
+    
     def klue_re_micro_f1(self, preds, labels):
         """KLUE-RE micro f1 (except no_relation)"""
         label_list = list(self.train_dataset.label2num.keys()) # get label_list from train_dataset.
@@ -217,6 +221,7 @@ class MyTrainer():
             no_relation_label_idx = label_list.index("no_relation")
             label_indices.remove(no_relation_label_idx)
         return sklearn.metrics.f1_score(labels, preds, average="micro", labels=label_indices) * 100.0
+
 
     def klue_re_auprc(self, probs, labels):
         """KLUE-RE AUPRC (with no_relation)"""
@@ -230,6 +235,7 @@ class MyTrainer():
             precision, recall, _ = sklearn.metrics.precision_recall_curve(targets_c, preds_c)
             score[c] = sklearn.metrics.auc(recall, precision)
         return np.average(score) * 100.0
+    
     
     def compute_metrics(self, pred):
         """ validation을 위한 metrics function """
@@ -250,3 +256,4 @@ class MyTrainer():
             'auprc' : auprc,
             'accuracy': acc,
         }
+        
