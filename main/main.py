@@ -53,7 +53,7 @@ if __name__ == "__main__":
     
     ## Get transformer & tokenizer
     ## TODO: preprocessing config에 넣기
-    selection = Selection(config, preprocessing.mask_id)
+    selection = Selection(config)
     model = selection.get_model()
     
     ## Curriculum

@@ -25,9 +25,9 @@ class Config:
     input_type = {0: "base-input", 1: "typed_punct_entity", 2: "Masked_QA", 3:"typed_punct_entity_front", 4: "entity_mask", 5: "entity_marker", 6:"typed_entity_marker"} 
     loss_type = {0: CrossEntropy, 1: Weighted_CrossEntropy, 2: FocalLoss}
     '''
-    train_type: int = 2
-    model_type: int = 1
-    input_type: int = 7
+    train_type: int = 0
+    model_type: int = 0
+    input_type: int = 1
 
     loss_type: int = 2
     pooling: str = "CLS" # 어떤 pooler output을 사용할 것인지 : ["MEAN", "CLS"]

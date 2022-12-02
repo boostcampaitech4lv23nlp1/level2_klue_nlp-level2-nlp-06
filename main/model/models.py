@@ -7,7 +7,11 @@ def mean_pooling(model_output, attention_mask):
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
+
 class TransformerModel(nn.Module):
+    """
+    BASE MODEL
+    """    
     def __init__(self, transformer, config):
         super(TransformerModel, self).__init__()
         ## Setting
@@ -40,6 +44,7 @@ class TransformerModel(nn.Module):
             self.pooler_linear = nn.Linear(self.h_dim, self.h_dim)
             self.dropout = nn.Dropout(0.1)
         
+        
     def forward(self, *input, input_ids, token_type_ids, attention_mask, labels=None):
         ## Tranformer output
         x = self.transformer(
@@ -69,6 +74,9 @@ class TransformerModel(nn.Module):
         return out
 
 class TransformerModelUsingMask(nn.Module):
+    """
+    QA MASK
+    """    
     def __init__(self, transformer, mask_token_id, config):
         super(TransformerModelUsingMask, self).__init__()
         ## Setting
@@ -95,12 +103,13 @@ class TransformerModelUsingMask(nn.Module):
             layers.append(nn.Linear(self.h_dim, self.config.num_labels))
         self.sequence = nn.Sequential(*layers)
         
+        
     def forward(self, *input, input_ids, token_type_ids, attention_mask, labels=None):
         ## Tranformer output
         x = self.transformer(
-            input_ids, #kwargs["input_ids"],
-            token_type_ids = token_type_ids, #kwargs["token_type_ids"],
-            attention_mask = attention_mask, #kwargs["attention_mask"],
+            input_ids,
+            token_type_ids = token_type_ids,
+            attention_mask = attention_mask,
             return_dict = True,
         ).last_hidden_state
         
@@ -146,26 +155,27 @@ class TransformerModelUsingEntity(nn.Module):
         self.classifier_dropout = nn.Dropout(0.1)
         self.classifier_fc = nn.Linear(self.h_dim * 3, self.config.num_labels)
         
+        
     def forward(self, *input, input_ids, token_type_ids, attention_mask, sub_entity_mask, obj_entity_mask, labels=None):
         ## Tranformer output
         if self.entity_from == 'middle':
             x = self.transformer(
-                input_ids, #kwargs["input_ids"],
-                token_type_ids = token_type_ids, #kwargs["token_type_ids"],
-                attention_mask = attention_mask, #kwargs["attention_mask"],
+                input_ids,
+                token_type_ids = token_type_ids,
+                attention_mask = attention_mask,
                 return_dict = True,
-            ) # (batch size, length of sentences, hidden state dim.)
+            )
 
             h0 = x.last_hidden_state[:, 0, :]
             h1 = torch.bmm(sub_entity_mask.unsqueeze(1).float(), x.hidden_states[7]).squeeze(1) / (sub_entity_mask != 0).sum(dim=1).unsqueeze(1)
             h2 = torch.bmm(obj_entity_mask.unsqueeze(1).float(), x.hidden_states[7]).squeeze(1) / (obj_entity_mask != 0).sum(dim=1).unsqueeze(1)
         elif self.entity_from == 'last':
             x = self.transformer(
-                input_ids, #kwargs["input_ids"],
-                token_type_ids = token_type_ids, #kwargs["token_type_ids"],
-                attention_mask = attention_mask, #kwargs["attention_mask"],
+                input_ids, 
+                token_type_ids = token_type_ids, 
+                attention_mask = attention_mask, 
                 return_dict = True,
-            ).last_hidden_state # (batch size, length of sentences, hidden state dim.)
+            ).last_hidden_state
 
             h0 = x[:, 0, :]
             h1 = torch.bmm(sub_entity_mask.unsqueeze(1).float(), x).squeeze(1) / (sub_entity_mask != 0).sum(dim=1).unsqueeze(1)
