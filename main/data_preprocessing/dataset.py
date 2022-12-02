@@ -1,8 +1,7 @@
-import pandas as pd
-from argparse import Namespace
-from typing import Tuple
-
 import torch
+import pandas as pd
+from typing import Tuple
+from argparse import Namespace
 from torch.utils.data import Dataset
 
 
@@ -27,6 +26,7 @@ class DataSet(Dataset):
         self.data = data
         self.tokenizer = tokenizer
         self.labels = list(data["encoded_label"])
+
 
     def __getitem__(self, idx: int):
         """
@@ -94,13 +94,8 @@ class DataSet(Dataset):
 
         return out
         
-    def __len__(self) -> int:
-        """
-        len 함수를 사용했을 때 return하는 값을 계산하는 함수
-
-        Returns:
-            int: 이 Dataset의 전체 데이터 길이
-        """        
+        
+    def __len__(self) -> int: 
         return len(self.data)
         
 
@@ -124,6 +119,7 @@ class DataSetTest(Dataset):
         ## Data & Tokenizer
         self.data = data
         self.tokenizer = tokenizer
+
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, int]:
         """
@@ -190,12 +186,7 @@ class DataSetTest(Dataset):
         
         return out
         
+        
     def __len__(self) -> int:
-        """
-        len 함수를 사용했을 때 return하는 값을 계산하는 함수
-
-        Returns:
-            int: 이 Dataset의 전체 데이터 길이
-        """        
         return len(self.data)
     
