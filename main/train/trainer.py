@@ -1,25 +1,14 @@
-import sys
-import wandb
 import torch
-import sklearn
-import datetime
-import warnings
-import numpy as np
-import pandas as pd
 import torch.nn as nn
 import torch.nn.functional as F
 
 from tqdm import tqdm
-from typing import List
-from torch import Tensor
 from pandas import DataFrame
 from argparse import Namespace
 from .criterion import FocalLoss
-from inference.test import Test
+from .trainer_utils import Compute_metrics
 from torch.utils.data import Dataset, DataLoader
-from transformers import AutoConfig, Trainer, TrainingArguments
-from transformers import AdamW, get_linear_schedule_with_warmup
-from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
+from transformers import Trainer, TrainingArguments
 
 
 class CustomTrainer(Trainer):
@@ -106,6 +95,8 @@ class MyTrainer():
         self.val_dataset = val_dataset
         self.val_data = val_data
         
+        self.compute_metrics = Compute_metrics(train_dataset.label2num)
+        
         ## 학습에 필요한 parameter 설정
         self.training_args = TrainingArguments(
             output_dir=config.checkpoint_dir,
@@ -127,9 +118,6 @@ class MyTrainer():
         
         
     def train(self):
-        """
-        Huggingface 라이브러리를 사용해 학습
-        """
         trainer = CustomTrainer(
             model=self.model,
             args=self.training_args,
@@ -212,48 +200,3 @@ class MyTrainer():
         ## Save Data
         train_data.to_csv("curriculum_data.csv", index=False)
     
-    
-    def klue_re_micro_f1(self, preds, labels):
-        """KLUE-RE micro f1 (except no_relation)"""
-        label_list = list(self.train_dataset.label2num.keys()) # get label_list from train_dataset.
-        label_indices = list(range(len(label_list)))
-        if "no_relation" in label_list:
-            no_relation_label_idx = label_list.index("no_relation")
-            label_indices.remove(no_relation_label_idx)
-        return sklearn.metrics.f1_score(labels, preds, average="micro", labels=label_indices) * 100.0
-
-
-    def klue_re_auprc(self, probs, labels):
-        """KLUE-RE AUPRC (with no_relation)"""
-        num_classes = len(self.train_dataset.label2num) # get length of label_list from train-dataset.
-        labels = np.eye(num_classes)[labels]
-
-        score = np.zeros((num_classes,))
-        for c in range(num_classes):
-            targets_c = labels.take([c], axis=1).ravel()
-            preds_c = probs.take([c], axis=1).ravel()
-            precision, recall, _ = sklearn.metrics.precision_recall_curve(targets_c, preds_c)
-            score[c] = sklearn.metrics.auc(recall, precision)
-        return np.average(score) * 100.0
-    
-    
-    def compute_metrics(self, pred):
-        """ validation을 위한 metrics function """
-        labels = pred.label_ids
-        preds = pred.predictions.argmax(-1)
-        probs = pred.predictions
-        
-        ## 저장
-        self.save()
-        
-        # calculate accuracy using sklearn's function
-        f1 = self.klue_re_micro_f1(preds, labels)
-        auprc = self.klue_re_auprc(probs, labels)
-        acc = accuracy_score(labels, preds)
-        
-        return {
-            'micro f1 score': f1,
-            'auprc' : auprc,
-            'accuracy': acc,
-        }
-        
