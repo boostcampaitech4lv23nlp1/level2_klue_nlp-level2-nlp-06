@@ -49,10 +49,17 @@ label : “ORG:founded”
 ![화면 캡처 2022-12-05 180230](https://user-images.githubusercontent.com/99873921/205596895-e8ee1928-7f79-4534-825b-6781f2ccf1c5.png)
 - 노션과 피어세션에서의 활발한 토론
 - **값진 프로젝트 경험** 
+
 ## 🎉 코드 사용 방법 <a name = "use"></a>
 
-main/run.py에서 원하는 파라미터로 변경한 후, 그대로 run.py를 실행하시면 됩니다.
+run.py 파일에서 원하는 parameter를 설정한 이후 아래와 같이 실행 가능합니다.<br>
+parameter에 대한 설명은 run.py에 담겨 있습니다.
+```python3
+python3 run.py
+```
 
-## 외부리소스 
-
+## 외부 리소스 
 https://huggingface.co/klue/roberta-large 의 tokenizer에 스페셜 토큰을 추가한 tokenizer가 main/data_processing/newtokenzier에 있습니다.
+
+## Wrap Up Report
+[KLUE_NLP_팀 리포트(06조).pdf](https://github.com/boostcampaitech4lv23nlp1/level2_klue_nlp-level2-nlp-06/files/10159039/KLUE_NLP_.06.pdf)
