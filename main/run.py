@@ -3,38 +3,41 @@ from dataclasses import dataclass
 
 @dataclass
 class Config:
-    def __init__(self):
-        ## 1. 모델 학습시킬 때 가장 먼저 바꿔야 하는 것
-        self.model_name: str = "jhgan/ko-sbert-multitask"
-        self.save_path: str = "../../saved_model/test.pt" # 최종 모델을 어디에 저장할지
-        self.result_path: str = "../../dataset/submission.csv" # 마지막 csv 파일을 어디에 저장할지
-        self.wandb_name: str = "'SBERT'" # wandb 내에서 작업 이름 설정 (중요)
-        self.wandb_group: str = "'SBERT'" # wandb group.
-        self.wandb_note: str = "'jhgan/ko-sbert-multitask'" # wandb note
-        
-        ## 2. 데이터 위치 (csv 파일)
-        self.train_data_path: str = "../../dataset/train/train2/train_80.csv"
-        self.val_data_path: str = "../../dataset/valid/valid2/valid_20.csv"
-        self.test_data_path: str = "../../dataset/test/test_data.csv"
+    ## 1. 모델 학습시킬 때 가장 먼저 바꿔야 하는 것
+    model_name: str = "klue/roberta-large"
+    save_path: str = "/opt/ml/dataset/pt_model/model-31.pt" # 최종 모델을 어디에 저장할지
+    result_path: str = "/opt/ml/dataset/submission/sub-31.csv" # 마지막 csv 파일을 어디에 저장할지
+    wandb_name: str = "klue/roberta-large/MLM-with-front-typed+full-relabel-data-more-epoch" # wandb 내에서 작업 이름 설정 (중요)
+    wandb_group: str = "test" # wandb group.
+    wandb_note: str = "'mlm + front typed + full-relabel-data'" # wandb note
+    #'lstm, num_layers=2, bias=True, dropout=0.1, bidirectional=True'
+    
+    ## 2. 데이터 위치 (csv 파일)
 
-        ## 3. 학습 설정
-        '''
-        train_type = {0: "base-model", 1: "rescent"}
-        model_type = {0: "base-model", 1: "Masked_QA"}
-        input_type = {0: "base-input", 1: "typed_punct_entity", 2: "Masked_QA", 3:"typed_punct_entity_front", 4: "entity_mask", 5: "entity_marker", 6:"typed_entity_marker"} 
-        loss_type = {0: CrossEntropy, 1: Weighted_CrossEntropy, 2: FocalLoss}
-        '''
-        self.train_type: int = 0
-        self.model_type: int = 1
-        self.input_type: int = 1
-        self.loss_type: int = 0
-        self.pooling = "MEAN" # 어떤 pooler output을 사용할 것인지 : ["MEAN", "CLS"]
-        self.epoch: int = 5
-        self.checkpoint_dir: str = "./results/SBERT" # Trainer의 학습 checkpoint 저장 경로.
-        self.label_dict_dir: str = None # RESCENT : label2num dictionary save path.
-        self.warmup_step: int = 2000 # learning rate warmup step.
-        self.eval_step: int = 500 # 모델 평가/저장 step 수.
-        self.add_rnn = '$False'
+    train_data_path: str = "~/dataset/train/train_relabel.csv"
+    val_data_path: str = "~/dataset/train/valid_20.csv"
+    test_data_path: str = "~/dataset/test/test_data.csv"
+
+    ## 3. 학습 설정
+    '''
+    train_type = {0: "base-model", 1: "rescent", 2: "curriculum", 3: "kfold"}
+    model_type = {0: "base-model", 1: "Masked_QA"}
+    input_type = {0: "base-input", 1: "typed_punct_entity", 2: "Masked_QA", 3:"typed_punct_entity_front", 4: "entity_mask", 5: "entity_marker", 6:"typed_entity_marker"} 
+    loss_type = {0: CrossEntropy, 1: Weighted_CrossEntropy, 2: FocalLoss}
+    '''
+    train_type: int = 0
+    model_type: int = 0
+    input_type: int = 1
+
+    loss_type: int = 2
+    pooling: str = "CLS" # 어떤 pooler output을 사용할 것인지 : ["MEAN", "CLS"]
+    add_rnn: bool = True # lstm layer를 BERT head에 추가할 것인가?
+    epoch: int = 3
+    checkpoint_dir: str = "./results" # Trainer의 학습 checkpoint 저장 경로.
+    label_dict_dir: str = None # RESCENT : label2num dictionary save path.
+    warmup_step: int = 500 # learning rate warmup step.
+    eval_step: int = 500 # 모델 평가/저장 step 수.
+    entity_from: str = "last" # ["last", "middle"]
 
     ## 4. 모델 하이퍼파라미터
     num_hidden_layer: int = 0 # BERT 뒤에 linear layer를 몇 개 쌓을지.
@@ -43,7 +46,7 @@ class Config:
     lr: float = 3e-5
 
     ## 5. 한번 바꾸면 바꿀일 없는 설정
-    wandb_project: str = "koohack"
+    wandb_project: str = "KLUE_RE"
     wandb_entity: str = "happy06"
     '''
     input type 에 대한 자세한 설명

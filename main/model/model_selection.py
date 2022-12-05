@@ -47,7 +47,7 @@ class Selection():
         elif self.config.model_type == 3:
             if self.config.entity_from == "middle":
                 model_config.output_hidden_states = True
-            
+            model_config.num_labels = 30
             transformer = AutoModel.from_pretrained(self.config.model_name, config=model_config, add_pooling_layer=False)
 
             self.model = TransformerModelUsingEntity(transformer, config=model_config, entity_from=self.config.entity_from)
