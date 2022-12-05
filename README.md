@@ -1,114 +1,58 @@
-<p align="center">
-  <a href="" rel="noopener">
- <img width=200px height=200px src="https://i.imgur.com/6wj0hh6.jpg" alt="Project logo"></a>
-</p>
-
-<h3 align="center">Project Title</h3>
-
-<div align="center">
-
-[![Status](https://img.shields.io/badge/status-active-success.svg)]()
-[![GitHub Issues](https://img.shields.io/github/issues/kylelobo/The-Documentation-Compendium.svg)](https://github.com/kylelobo/The-Documentation-Compendium/issues)
-[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/kylelobo/The-Documentation-Compendium.svg)](https://github.com/kylelobo/The-Documentation-Compendium/pulls)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](/LICENSE)
-
-</div>
-
----
-
-<p align="center"> Few lines describing your project.
-    <br> 
-</p>
-
+# KLUE-RE
+NLP 6조 HAPPY팀이 만든 부스트 캠프에서 진행한 KLUE-RE 대회 코드입니다.
 ## 📝 Table of Contents
 
-- [About](#about)
-- [Getting Started](#getting_started)
-- [Deployment](#deployment)
-- [Usage](#usage)
-- [Built Using](#built_using)
-- [TODO](../TODO.md)
-- [Contributing](../CONTRIBUTING.md)
-- [Authors](#authors)
-- [Acknowledgments](#acknowledgement)
+- [프로젝트 개요](#about)
+- [팀 구성 및 역할](#team_member)
+- [프로젝트 진행](#progress)
+- [프로젝트 결과](#result)
+- [코드 사용 방법](#use)
 
-## 🧐 About <a name = "about"></a>
+## 🧐 프로젝트 개요 <a name = "about"></a>
 
-Write about 1-2 paragraphs describing the purpose of your project.
-
-## 🏁 Getting Started <a name = "getting_started"></a>
-
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See [deployment](#deployment) for notes on how to deploy the project on a live system.
-
-### Prerequisites
-
-What things you need to install the software and how to install them.
+문장 속에서 단어 간 관계성을 파악하는 것은 문장의 의미나 의도를 해석함에 있어 많은 도움을 제공해준다. 문장 속 단어에 대한 속성과 관계를 파악하는 문제를 관계 추출(Relation Extraction, 이하 RE)이라고 부른다. 본 대회에서 사용한 dataset은 KLUE Benchmark의 RE로 sentence, subject entity, object entity가 주어졌을 때, subject entity와 object entity의 관계를 추출하도록 설계되어 있으므로 이 task는 classification의 일종이라고 볼 수 있다.
+아래 예시는 한 문장에서 object entity와 subject entity의 관계를 분류하는 문제이다. 
 
 ```
-Give examples
+문장 : 디비시옹 엘리트는 1926년 창설되어 FFBS가 주관하는 프랑스의 프로 야구 리그이다.
+
+object entity : {’word’:”디비시옹 엘리트”, ‘type’: “PER”, ‘start_idx’: 0, ‘end_idx’: 7}
+
+subject entity : {’word’: ”1926년”, ‘type’: ”DAT”, ‘start_idx’: 10, ‘end_idx’: 15}
+
+label : “ORG:founded”
 ```
 
-### Installing
+  Subject entity와 object entity에는 entity word, index, type 정보가 포함된다. word는 entity 단어, index는 문장 내에서 관계를 보고자 하는 entity word의 위치, type은 해당 entity가 어떤 종류(인물, 단체 등)의 것인지 설명한다.
+  
+  데이터는 총 30개의 라벨(관계를 표현하는 29개 라벨과 no_relation)로 이루어져 있다. 라벨의 경우 분포가 매우 불균형하다.
+  
+  본 대회에서는 32470개의 train set과 7765개의 test set을 사용한다. 별도의 dev set을 제공하지 않고, 본래 KLUE RE dataset의 dev set을 test set으로 사용한다.
+## 🏁 팀 구성 및 역할 <a name = "team_member"></a>
 
-A step by step series of examples that tell you how to get a development env running.
+- Project Manager: 박수현
+- Code Reviewer: 류재환, 박승현
+- Researcher: 김준휘, 설유민
 
-Say what the step will be
+## 🔧 프로젝트 진행 <a name = "progress"></a>
 
-```
-Give the example
-```
+![ryu drawio](https://user-images.githubusercontent.com/99873921/205595706-628ebac6-bc11-48c9-978c-e8f1f23ca5c4.png)
 
-And repeat
 
-```
-until finished
-```
+## ✍️ 프로젝트 결과 <a name = "result"></a>
 
-End with an example of getting some data out of the system or using it for a little demo.
+- 27개의 PR
 
-## 🔧 Running the tests <a name = "tests"></a>
+![화면 캡처 2022-12-05 180217](https://user-images.githubusercontent.com/99873921/205596813-7a568fc7-b2cf-47fa-bc10-62bdd11f4642.png)
+- 126개의 Commit
 
-Explain how to run the automated tests for this system.
+![화면 캡처 2022-12-05 180230](https://user-images.githubusercontent.com/99873921/205596895-e8ee1928-7f79-4534-825b-6781f2ccf1c5.png)
+- 노션과 피어세션에서의 활발한 토론
+- **값진 프로젝트 경험** 
+## 🎉 코드 사용 방법 <a name = "use"></a>
 
-### Break down into end to end tests
+main/run.py에서 원하는 파라미터로 변경한 후, 그대로 run.py를 실행하시면 됩니다.
 
-Explain what these tests test and why
+## 외부리소스 
 
-```
-Give an example
-```
-
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-## 🎈 Usage <a name="usage"></a>
-
-Add notes about how to use the system.
-
-## 🚀 Deployment <a name = "deployment"></a>
-
-Add additional notes about how to deploy this on a live system.
-
-## ⛏️ Built Using <a name = "built_using"></a>
-
-- [MongoDB](https://www.mongodb.com/) - Database
-- [Express](https://expressjs.com/) - Server Framework
-- [VueJs](https://vuejs.org/) - Web Framework
-- [NodeJs](https://nodejs.org/en/) - Server Environment
-
-## ✍️ Authors <a name = "authors"></a>
-
-- [@kylelobo](https://github.com/kylelobo) - Idea & Initial work
-
-See also the list of [contributors](https://github.com/kylelobo/The-Documentation-Compendium/contributors) who participated in this project.
-
-## 🎉 Acknowledgements <a name = "acknowledgement"></a>
-
-- Hat tip to anyone whose code was used
-- Inspiration
-- References
+https://huggingface.co/klue/roberta-large 의 tokenizer에 스페셜 토큰을 추가한 tokenizer가 main/data_processing/newtokenzier에 있습니다.
