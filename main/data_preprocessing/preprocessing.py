@@ -1,32 +1,32 @@
-import random
-import torch
 import pandas as pd
 import pickle as pickle
-from typing import Tuple
-from torch import Tensor
 from argparse import Namespace
-from pandas import DataFrame
-from torch.utils.data import Dataset, DataLoader
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
+from transformers import AutoTokenizer
+from .dataset import DataSet, DataSetTest
+from sklearn.model_selection import StratifiedKFold
+from .data_utils import get_weights_prob, preprocessing_dataset, label_to_num
+
 
 class Preprocessing():
     """
     전처리를 담당하는 Class
     """    
-    def __init__(self, config: Namespace, tokenizer):
+    def __init__(self, config: Namespace):
         """
         전처리한 데이터를 처리하는 부분
 
         Args:
             config (Namespace): Setting Parameters
-            tokenizer (tokenizer): tokenzier
         """
         ## Setting
         self.config = config
         
         ## Tokenizer
-        self.tokenizer = tokenizer
+        if config.input_type in [4,5,6]: # special token 추가한 tokenizer
+            self.tokenizer = AutoTokenizer.from_pretrained("./data_preprocessing/newtokenizer")
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
+        self.config.mask_id = self.tokenizer.mask_token_id # QA를 위한 mask id 저장
         
         ## Load dataset & DataLoader
         self.train_data = pd.read_csv(self.config.train_data_path)
@@ -35,82 +35,68 @@ class Preprocessing():
         self.train_dataset = None
         self.val_dataset = None
         self.test_dataset = None
+        self.label2num = None
+        
+        ## Kfold & Curriculum data
+        self.folded_data = []
+        self.folded_dataset = []
         
         ## Get Label & Label encoding to number
-        self.label_to_num(self.train_data)
-        self.label_to_num(self.val_data)
+        self.set_label2num()
+        self.config.num_labels = len(self.label2num) # Transformer 모델의 linear output 수를 조절하기 위해 변수 추가.
+        print("Label has been mapped to :", self.label2num)
+        
+        ## Get Class Distribution Weights for CrossEntropy loss.
+        self.weights = get_weights_prob(self.label2num, self.train_data, self.config.loss_type)
         
         ## Seperate obj & subj
-        self.preprocessing_dataset(self.train_data)
-        self.preprocessing_dataset(self.test_data)
-        self.preprocessing_dataset(self.val_data)
+        preprocessing_dataset(self.train_data)
+        preprocessing_dataset(self.test_data)
+        preprocessing_dataset(self.val_data)
         
         ## 어떤 input으로 모델을 학습시킬지 결정하는 구간
-        ## TODO: input_type을 설정하여
         if self.config.input_type == 0:
             self.simple_concat(self.train_data)
             self.simple_concat(self.test_data)
             self.simple_concat(self.val_data)
+        elif self.config.input_type in [1,3,4,5,6]:
+            self.entity_marker(self.train_data, config.input_type)
+            self.entity_marker(self.val_data, config.input_type)
+            self.entity_marker(self.test_data, config.input_type)
+            
+        ## MLM
+        if self.config.model_type == 1:
+            self.concat_and_mask(self.train_data)
+            self.concat_and_mask(self.val_data)
+            self.concat_and_mask(self.test_data)
         
-        ## Train & Validation Seperation
-        ## TODO: Validation dataset Seperation or other method
-        #self.seperate_train_val()
+        ## KFold & Curriculum
+        if self.config.train_type in [2, 3]:
+            self.set_fold()
         
         ## Make data loader
         self.make_data_set()
-        
     
-    def preprocessing_dataset(self, data: DataFrame):
-        """
-        initial dataset 내부의 entity를 사용하기 좋게 변형해줍니다.
-
-        Args:
-            data (DataFrame): 전처리를 하고 싶은 데이터
-        """
-        sub_word = []
-        sub_start = []
-        sub_end = []
-        sub_type = []
-        
-        obj_word = []
-        obj_start = []
-        obj_end = []
-        obj_type = []
-        
-        for i,j in zip(data["subject_entity"], data["object_entity"]):
-            s = i[1:-1].split(":")
-            o = j[1:-1].split(":")
-            
-            s_word = s[1][2:-14]
-            s_start = s[2][1:-11]
-            s_end = s[3][1:-8]
-            s_type = s[4][2:-1]
-            
-            o_word = o[1][2:-14]
-            o_start = o[2][1:-11]
-            o_end = o[3][1:-8]
-            o_type = o[4][2:-1]
-            
-            sub_word.append(s_word)
-            sub_start.append(s_start)
-            sub_end.append(s_end)
-            sub_type.append(s_type)
-            
-            obj_word.append(o_word)
-            obj_start.append(o_start)
-            obj_end.append(o_end)
-            obj_type.append(o_type)
-
-        data["sub_word"] = sub_word
-        data["sub_start"] = sub_start
-        data["sub_end"] = sub_end
-        data["sub_type"] = sub_type
-        
-        data["obj_word"] = obj_word
-        data["obj_start"] = obj_start
-        data["obj_end"] = obj_end
-        data["obj_type"] = obj_type
     
+    def set_label2num(self):
+        """
+        label to num dictionary 정의
+        """
+        if self.config.train_type == 1: # Recent : 일부 라벨로만 학습할 때.
+            labels = list(self.train_data["label"].unique()) + list(self.val_data["label"].unique())
+            labels = sorted(list(set(labels)))
+            self.label2num = {label: i for i, label in enumerate(labels)}
+            
+            if self.config.label_dict_dir != None:
+                with open(self.config.label_dict_dir, "wb") as f:
+                    pickle.dump(self.label2num, f)
+        else: # 30개 전체 라벨로 학습할 때,
+            with open("./source/dict_label_to_num.pkl", "rb") as f:
+                self.label2num = pickle.load(f)
+        self.train_data = label_to_num(self.train_data, self.label2num)
+        self.val_data = label_to_num(self.val_data, self.label2num)
+        
+        
     def simple_concat(self, data):
         """
         가장 간단하게 object + [SEP] + subject + [SEP] + sentence 를 조합한 방식
@@ -122,57 +108,151 @@ class Preprocessing():
         obj = list(data["obj_word"])
         sub = list(data["sub_word"])
         sentence = list(data["sentence"])
+        
         for i in range(len(data)):
-            store.append(obj[i]+"[SEP]"+sub[i]+"[SEP]"+sentence[i])
+            store.append(obj[i]+" [SEP] "+sub[i]+" [SEP] "+sentence[i])
         data["sentence"] = store
+        
     
-    def seperate_train_val(self):
+    def entity_marker(self, data, input_type):
         """
-        train data와 validation data를 간단하게 분리하는 함수
-        """
-        if self.config.val_data_flag == 0:
-            self.train_data, self.val_data = train_test_split(self.train_data, test_size=0.06, random_state=random.randrange(1, 10000))
-        elif self.config.val_data_flag == 1:
-            train_store = []
-            val_store = []
-            for i in range(30):
-                now_data = self.train_data.loc[self.train_data["encoded_label"] == i]
-                percent = 20 / len(now_data)
-                train, val = train_test_split(now_data, test_size=percent, random_state=random.randrange(1, 10000))
-                
-                train_store.append(train)
-                val_store.append(val)
-            
-            train_data = train_store[0]
-            val_data = val_store[0]
-            for i in range(1, 30):
-                train_data = pd.concat([train_data, train_store[i]], axis = 0)
-                val_data = pd.concat([val_data, val_store[i]], axis = 0)
+        input type에 따른 sentence 변경
 
-            self.train_data = train_data.sample(n=len(train_data), replace=False)
-            self.val_data = val_data.sample(n=len(val_data), replace=False)
-            
-    def label_to_num(self, data):
-        """
-        data의 label을 숫자로 encoding하는 함수
+        Args:
+            data (DataFrame): 변경할 dataset
+            input_type (int): 'sentence' 유형
         """        
-        with open("./source/dict_label_to_num.pkl", "rb") as f:
-            dict_label_to_num = pickle.load(f)
         
-        encoded_label = []
-        for i in range(len(data)):
-            encoded_label.append(dict_label_to_num[data["label"].iloc[i]])
-        
-        data["encoded_label"] = encoded_label
+        dic = {"PER": "사람", "ORG": "조직", "LOC": "장소", "DAT": "일시", "POH": "명사", "NOH": "숫자"}
     
+        store = []
+        new_sub_start = []
+        new_sub_end = []
+        new_obj_start = []
+        new_obj_end = []
+        for i in range(len(data)):
+            s = data["sentence"][i]
+            sj = data["sub_word"][i]
+            s_s = int(data["sub_start"][i])
+            s_e = int(data["sub_end"][i])
+            s_t = data["sub_type"][i]
+            oj = data["obj_word"][i]
+            o_s = int(data["obj_start"][i])
+            o_e = int(data["obj_end"][i])
+            o_t = data["obj_type"][i]
+            
+            if input_type == 1:
+                subject_entity = "@ " + "+ " + dic[s_t] + " + " + sj + " @ "
+                object_entity = "# " + "^ " + dic[o_t] + " ^ " + oj + " # "
+                start_offset = 9
+                end_offset = 3
+            elif input_type == 3:
+                subject_entity = "@ " + "+ " + s_t + " + " + sj + " @ "
+                object_entity = "# " + "^ " + o_t + " ^ " + oj + " # "
+                start_offset = 10
+                end_offset = 3
+            elif input_type == 4:
+                subject_entity = "[SUBJ-"+s_t+"]"
+                object_entity = "[OBJ-"+o_t+"]"
+                start_offset = 6
+                end_offset = 1
+            elif input_type == 5:
+                subject_entity = " [E1] " + sj + " [/E1] "
+                object_entity = " [E2] " + oj + " [/E2] "
+                start_offset = 6
+                end_offset = 7
+            elif input_type == 6:
+                subject_entity = " [S:"+s_t+"] " + sj + " [/S:"+s_t+"] "
+                object_entity = " [O:"+o_t+"] " + oj + " [/O:"+o_t+"] "
+                start_offset = 13
+                end_offset = 14
+
+            if s_e > o_e:
+                s1 = s[:o_s]
+                s2 = s[o_e+1:s_s]
+                s3 = s[s_e+1:]
+                if input_type != 3:
+                    new_s = s1 + object_entity + s2 + subject_entity + s3
+                    new_s_s = s_s + 2 * start_offset + end_offset
+                    new_s_e = new_s_s + len(sj) - 1
+                    new_o_s = o_s + start_offset
+                    new_o_e = new_o_s + len(oj) - 1
+                else:
+                    new_s = subject_entity + " [SEP] " + object_entity + " [SEP] " + s1 + object_entity + s2 + subject_entity + s3
+                    new_s_s = len(subject_entity + " [SEP] " + object_entity + " [SEP] ") + s_s + 2 * start_offset + end_offset
+                    new_s_e = new_s_s + len(sj) - 1
+                    new_o_s = len(subject_entity + " [SEP] " + object_entity + " [SEP] ") + o_s + start_offset
+                    new_o_e = new_o_s + len(oj) - 1
+            else:
+                s1 = s[:s_s]
+                s2 = s[s_e+1:o_s]
+                s3 = s[o_e+1:]
+                if input_type != 3:
+                    new_s = s1 + subject_entity + s2 + object_entity + s3
+                    new_s_s = s_s + start_offset
+                    new_s_e = new_s_s + len(sj) - 1
+                    new_o_s = o_s + 2 * start_offset + end_offset
+                    new_o_e = new_o_s + len(oj) - 1
+                else:
+                    new_s = subject_entity + " [SEP] " + object_entity + " [SEP] " + s1 + subject_entity + s2 + object_entity + s3
+                    new_s_s = len(subject_entity + " [SEP] " + object_entity + " [SEP] ") + s_s + start_offset
+                    new_s_e = new_s_s + len(sj) - 1
+                    new_o_s = len(subject_entity + " [SEP] " + object_entity + " [SEP] ") + o_s + 2 * start_offset + end_offset
+                    new_o_e = new_o_s + len(oj) - 1
+
+            new_sub_start.append(new_s_s)
+            new_sub_end.append(new_s_e)
+            new_obj_start.append(new_o_s)
+            new_obj_end.append(new_o_e)
+            store.append(new_s)
+            
+        data["sentence"] = store
+        data["new_sub_start"] = new_sub_start
+        data["new_sub_end"] = new_sub_end
+        data["new_obj_start"] = new_obj_start
+        data["new_obj_end"] = new_obj_end
+
+
+    def concat_and_mask(self, data):
+        """
+        MLM을 위해 관계 부분을 masking한 문장 만드는 함수
+
+        Args:
+            data (DataFrame): train_data, val_data, test_data 중 하나
+        """        
+        new_sentences = []
+        for i in range(len(data)):
+            new_sentences.append(
+                f'{data["sentence"][i]} {self.tokenizer.sep_token} {data["sub_word"][i]}와 {data["obj_word"][i]}의 관계는 {self.tokenizer.mask_token}'
+            )
+        data["sentence"] = new_sentences
+
+
     def make_data_set(self):
         """
         train loader와 validation loader를 생성하는 함수
-        """                
-        self.train_dataset = DataSet(self.train_data, self.tokenizer, self.config)
-        self.val_dataset = DataSet(self.val_data, self.tokenizer, self.config)
-        self.test_dataset = DataSetTest(self.test_data, self.tokenizer, self.config)
+        """
+        self.train_dataset = DataSet(self.train_data, self.tokenizer, self.config, self.label2num)
+        self.val_dataset = DataSet(self.val_data, self.tokenizer, self.config, self.label2num)
+        self.test_dataset = DataSetTest(self.test_data, self.tokenizer, self.config, self.label2num)
     
+    
+    def set_fold(self):
+        """
+        KFold를 위해 train data를 sub train data와 sub valiadation data로 변경하는 코드
+        """        
+        skf = StratifiedKFold(n_splits=5)
+        for train_index, val_index in skf.split(self.train_data, self.train_data["label"]):
+            # train_data, val_data 저장
+            train_data, val_data = self.train_data.iloc[train_index], self.train_data.iloc[val_index]
+            self.folded_data.append([train_data, val_data])
+            
+            # trian_dataset, val_dataset 저장
+            train_dataset = DataSet(train_data, self.tokenizer, self.config, self.label2num)
+            val_dataset = DataSet(val_data, self.tokenizer, self.config, self.label2num)
+            self.folded_dataset.append([train_dataset, val_dataset])
+        
+        
     ## ALL Get Method
     def get_train_dataset(self): return self.train_dataset
     def get_val_dataset(self): return self.val_dataset
@@ -180,113 +260,5 @@ class Preprocessing():
     def get_train_data(self): return self.train_data
     def get_val_data(self): return self.val_data
     def get_test_data(self): return self.test_data
-
-class DataSet(Dataset):
-    """
-    데이터를 처리하여 추출하는 Class
-    """    
-    def __init__(self, data: DataFrame, tokenizer, config: Namespace):
-        """
-        설정 값 및 tokenizer를 initializing
-
-        Args:
-            data (DataFrame): train data, val data, test data 중 하나
-            tokenizer (tokenzier): tokenizer
-            config (Namespace): Setting Parameters
-        """        
-        ## Setting
-        self.config = config
-        
-        ## Data & Tokenizer
-        self.data = data
-        self.tokenizer = tokenizer
-        self.labels = list(data["encoded_label"])
-
-    def __getitem__(self, idx: int):
-        """
-        이 Class를 indexing했을 때 return하는 값을 설정하는 함수
-
-        Args:
-            idx (int): 데이터의 index
-
-        Returns:
-            Dict: Tensor는 transformer input으로 들어가고, int는 encoded class
-        """              
-        out = self.tokenizer.encode_plus(
-            list(self.data["sentence"])[idx],
-            return_tensors="pt",
-            max_length=self.config.mx_token_size,
-            truncation=True,
-            pad_to_max_length=True,
-            add_special_tokens=True,
-        )
-        out["input_ids"] = out["input_ids"][0]
-        out["token_type_ids"] = out["token_type_ids"][0]
-        out["attention_mask"] = out["attention_mask"][0]
-        out["labels"] = torch.tensor(self.labels[idx])
-        
-        return out
-        
-    def __len__(self) -> int:
-        """
-        len 함수를 사용했을 때 return하는 값을 계산하는 함수
-
-        Returns:
-            int: 이 Dataset의 전체 데이터 길이
-        """        
-        return len(self.data)
-        
-
-class DataSetTest(Dataset):
-    """
-    데이터를 처리하여 추출하는 Class
-    """    
-    def __init__(self, data: DataFrame, tokenizer, config: Namespace):
-        """
-        설정 값 및 tokenizer를 initializing
-
-        Args:
-            data (DataFrame): train data, val data, test data 중 하나
-            tokenizer (tokenzier): tokenizer
-            config (Namespace): Setting Parameters
-        """        
-        ## Setting
-        self.config = config
-        
-        ## Data & Tokenizer
-        self.data = data
-        self.tokenizer = tokenizer
-        #self.labels = list(data["encoded_label"])
-
-    def __getitem__(self, idx: int) -> Tuple[Tensor, Tensor, Tensor, int]:
-        """
-        이 Class를 indexing했을 때 return하는 값을 설정하는 함수
-
-        Args:
-            idx (int): 데이터의 index
-
-        Returns:
-            List[Tensor, Tensor, Tensor, int]: Tensor는 transformer input으로 들어가고, int는 encoded class
-        """              
-        out = self.tokenizer.encode_plus(
-            list(self.data["sentence"])[idx],
-            return_tensors="pt",
-            max_length=self.config.mx_token_size,
-            truncation=True,
-            pad_to_max_length=True,
-            add_special_tokens=True,
-        )
-        out["input_ids"] = out["input_ids"]
-        out["token_type_ids"] = out["token_type_ids"]
-        out["attention_mask"] = out["attention_mask"]
-        
-        return out
-        
-    def __len__(self) -> int:
-        """
-        len 함수를 사용했을 때 return하는 값을 계산하는 함수
-
-        Returns:
-            int: 이 Dataset의 전체 데이터 길이
-        """        
-        return len(self.data)
+    def get_fold_data(self): return self.folded_data
+    def get_fold_dataset(self): return self.folded_dataset
