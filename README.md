@@ -62,4 +62,4 @@ python3 run.py
 https://huggingface.co/klue/roberta-large 의 tokenizer에 스페셜 토큰을 추가한 tokenizer가 main/data_processing/newtokenzier에 있습니다.
 
 ## Wrap Up Report
-[KLUE_NLP_팀 리포트(06조).pdf](https://github.com/boostcampaitech4lv23nlp1/level2_klue_nlp-level2-nlp-06/files/10159039/KLUE_NLP_.06.pdf)
+[KLUE_NLP_팀 리포트(06조).pdf](https://github.com/boostcampaitech4lv23nlp1/level2_klue_nlp-level2-nlp-06/files/10193340/Relation.Extraction.Task.Wrap.pdf)
